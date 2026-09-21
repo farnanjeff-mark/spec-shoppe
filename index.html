@@ -96,6 +96,11 @@
   .menu button.vendors { border-left-color: var(--red); }
   .menu button.vendors:hover { background: #fbf3f2; }
 
+  /* Recalls */
+  .recrow { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
+  .recrow label { width: 150px; }
+  .rl { font-size: 10pt; }
+
   /* Vendors */
   .vhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
   .vhead .note { margin: 0; }
@@ -267,6 +272,12 @@
     #print-sheet .h { font-weight: bold; font-size: 9pt; margin: 0 0 2pt; }
     #print-sheet .notes { border: 0.6pt solid #888; height: 46pt; padding: 2pt 3pt; overflow: hidden; white-space: pre-wrap; }
     #print-sheet .det span { margin-right: 10pt; }
+    #print-sheet .rl h3 { font-size: 13pt; margin: 0 0 6pt; }
+    #print-sheet .rl table { border-collapse: collapse; width: 100%; }
+    #print-sheet .rl th, #print-sheet .rl td { border: 0.6pt solid #888; padding: 3pt 4pt; text-align: left; font-size: 9.5pt; }
+    #print-sheet .rl th { background: #eee; }
+    #print-sheet .rl thead { display: table-header-group; }
+    #print-sheet .rl tr { page-break-inside: avoid; }
     #print-sheet .slip { font-size: 10pt; position: relative; }
     #print-sheet .slip .ssig { position: absolute; left: 0; bottom: 0.2in; width: 3.4in; }
     #print-sheet .slip .sline { border-top: 0.8pt solid #000; height: 0; }
@@ -324,6 +335,10 @@
       <button type="button" class="counts" data-go="counts">
         <strong>Daily counts</strong>
         <span>Pick a date and see that day's total.</span>
+      </button>
+      <button type="button" class="recalls" data-go="recalls">
+        <strong>Recalls</strong>
+        <span>See who is due for a recall card between two dates.</span>
       </button>
       <button type="button" class="vendors" data-go="vendors">
         <strong>Vendors</strong>
@@ -439,6 +454,7 @@
             <div data-part="rx" class="visitmeta">
               <label>Visit date <input type="text" id="v_service_date" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
               <label>Doctor <input type="text" id="v_doctor" autocomplete="off"></label>
+              <label>Recall date <input type="text" id="v_recall_date" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
             </div>
             <div class="visitbtns">
               <button type="button" class="primary" id="rx-new">New visit</button>
@@ -512,6 +528,20 @@
   </section>
 
   <!-- Placeholder -->
+  <!-- Recalls -->
+  <section id="view-recalls" class="hidden">
+    <h2>Recalls</h2>
+    <div class="recrow">
+      <label>From <input type="text" id="recall-from" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+      <label>To <input type="text" id="recall-to" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+      <button type="button" class="primary" id="recall-show">Show</button>
+      <button type="button" class="secondary" id="recall-print-list" disabled>Print list</button>
+    </div>
+    <p class="note" id="recall-note">Type the two dates as six digits, like 01/01/27, then click Show.</p>
+    <div class="results" id="recall-results"></div>
+    <button type="button" class="secondary" data-go="menu">Back to main menu</button>
+  </section>
+
   <!-- Vendors: list and search -->
   <section id="view-vendors" class="hidden">
     <h2>Vendors</h2>
@@ -588,7 +618,7 @@
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   /* ---------- Screens ---------- */
-  const views = ["login", "menu", "patients", "checked", "vendors", "vendor", "record", "counts"];
+  const views = ["login", "menu", "patients", "checked", "recalls", "vendors", "vendor", "record", "counts"];
   function show(name) {
     views.forEach(v => document.getElementById("view-" + v).classList.toggle("hidden", v !== name));
     document.getElementById("main").classList.toggle("wide", name === "record");
@@ -699,6 +729,7 @@
   const V_TAXABLE = ["frame_chg", "misc_chg", "lens_chg", "contacts_chg"];   // exam is not taxed
   const V_CALC = ["tax", "total"];
   V_PLAIN.concat(V_CHARGES, V_CALC).forEach(n => { vin[n] = $("v_" + n); });
+  vin.recall_date = $("v_recall_date");
 
   function toCents(str) {
     const s = String(str).replace(/[$,\s]/g, "");
@@ -777,6 +808,7 @@
   function fillRx(rec) {
     V_PLAIN.forEach(k => { if (k !== "service_date") vin[k].value = (rec && rec[k]) || ""; });
     setDate(vin.service_date, rec ? rec.service_date : todayISO());
+    setDate(vin.recall_date, rec ? rec.recall_date : null);
     V_RX.forEach(k => { vin[k].value = (rec && rec[k]) || ""; });
     V_CHARGES.concat(V_CALC).forEach(k => {
       vin[k].value = (rec && rec[k] !== null && rec[k] !== undefined) ? Number(rec[k]).toFixed(2) : "";
@@ -998,7 +1030,7 @@
     fillPatient(data);
     showRx();
     clearMessages();
-    $("r-back-btn").textContent = cameFrom === "checked" ? "Back to list" : "Back to search";
+    $("r-back-btn").textContent = cameFrom === "checked" ? "Back to list" : cameFrom === "recalls" ? "Back to recalls" : "Back to search";
     show("record");
   }
 
@@ -1010,7 +1042,9 @@
     const bad = V_CHARGES.find(k => Number.isNaN(toCents(vin[k].value)));
     if (bad) return { error: "Prices must be numbers, like 125.00.", field: vin[bad] };
     recalc();
-    const rec = { service_date: visitIso };
+    const recallIso = readDate(vin.recall_date);
+    if (recallIso === null) return { error: DATE_MSG, field: vin.recall_date };
+    const rec = { service_date: visitIso, recall_date: recallIso || null };
     ["doctor", "frame", "misc", "lens_type", "notes"].concat(V_RX).forEach(k => {
       const v = vin[k].value.trim();
       rec[k] = v === "" ? null : v;
@@ -1134,6 +1168,7 @@
         rxRows.sort(byDateDesc);
         rxIndex = rxRows.findIndex(r => r.prescription_id === rxId);
         if (readDate(vin.service_date) === data.service_date) setDate(vin.service_date, data.service_date);
+        if (readDate(vin.recall_date) === (data.recall_date || "")) setDate(vin.recall_date, data.recall_date);
         renderVisitList();
       }
 
@@ -1203,6 +1238,7 @@
     pDirty = false; rDirty = false; oDirty = false;
     clearMessages();
     if (cameFrom === "checked" && checkedFind) { show("checked"); loadChecked(Math.max(checkedLoaded, CHECK_PAGE)); }
+    else if (cameFrom === "recalls") { show("recalls"); loadRecalls(); }
     else goSearch(false);
   });
 
@@ -1233,7 +1269,7 @@
     "f_home_phone", "f_work_phone", "f_cell_phone", "f_email",
     "f_birthday", "f_medical_no", "f_vsp_number", "f_ecpa_number", "f_bcbs_number",
     "f_occupation", "f_employer", "f_insurance_holder",
-    "v_service_date", "v_doctor",
+    "v_service_date", "v_doctor", "v_recall_date",
     "v_rsph", "v_rcyl", "v_raxis", "v_radd",
     "v_lsph", "v_lcyl", "v_laxis", "v_ladd",
     "v_od_prism", "v_od_base", "v_os_prism", "v_os_base",
@@ -1482,8 +1518,7 @@
     { col: "ck_lions", label: "Bill Lions Club", button: "Find Lions Club patients", cls: "" },
     { col: "ck_other_ins", label: "Bill Other Ins", button: "Find Other Ins patients", cls: "" },
     { col: "ck_pt_took_frames", label: "Pt Took Frame", button: "Find Pt Took Frame", cls: "claim" },
-    { col: "ck_payments", label: "Payments", button: "Find Payments", cls: "claim" },
-    { col: "ck_filed", label: "Filed", button: "Find Filed", cls: "claim" }
+    { col: "ck_payments", label: "Payments", button: "Find Payments", cls: "claim" }
   ];
   const CHECK_PAGE = 200;
   let checkedFind = null;    // which box is being listed
@@ -1549,6 +1584,78 @@
   $("new-patient-btn").addEventListener("click", () => {
     const typed = searchInput.value.trim().split(/\s+/)[0] || "";
     openNewRecord(/^[A-Za-z'-]+$/.test(typed) ? typed : "");
+  });
+
+  /* ---------- Recalls: who is due for a recall card between two dates ---------- */
+  const recallFrom = $("recall-from"), recallTo = $("recall-to");
+  let recallRows = [], recallSeq = 0;
+
+  function openRecalls() {
+    show("recalls");
+    if (recallFrom.value.trim() && recallTo.value.trim()) loadRecalls();
+    else recallFrom.focus();
+  }
+  function recallNote(text, bad) {
+    const n = $("recall-note");
+    n.textContent = text;
+    n.style.color = bad ? "var(--red)" : "";
+    n.style.fontWeight = bad ? "bold" : "";
+  }
+  const recallPhone = (r) => r.cell_phone || r.home_phone || r.work_phone || "";
+  const recallCity = (r) => [r.city, [r.state, r.zip_code].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const hasMailingAddress = (r) => !!(r.address && r.address.trim() && (r.city || r.zip_code));
+
+  async function loadRecalls() {
+    const mine = ++recallSeq;
+    const box = $("recall-results");
+    const a = readDate(recallFrom), b = readDate(recallTo);
+    recallRows = [];
+    $("recall-print-list").disabled = true;
+    if (a === null || b === null) { box.innerHTML = ""; recallNote("Enter dates as six digits, like 01/02/27.", true); return; }
+    if (!a || !b) { box.innerHTML = ""; recallNote("Enter a From date and a To date."); return; }
+    if (a > b) { box.innerHTML = ""; recallNote("The From date is after the To date.", true); return; }
+    recallNote("Looking...");
+    const { data, error } = await db.rpc("recalls", { from_date: a, to_date: b });
+    if (mine !== recallSeq) return;
+    box.innerHTML = "";
+    if (error) { recallNote("The list didn't load. Check the internet connection and try again.", true); return; }
+    recallRows = data;
+    data.forEach(r => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      const strong = document.createElement("strong");
+      strong.textContent = [r.last_name, r.first_name].filter(Boolean).join(", ");
+      const span = document.createElement("span");
+      const bits = ["Recall " + fmtDate(r.recall_date)];
+      bits.push(hasMailingAddress(r) ? [r.address, recallCity(r)].filter(Boolean).join(", ") : "NO ADDRESS");
+      if (recallPhone(r)) bits.push(recallPhone(r));
+      if (r.last_visit) bits.push("Last visit " + fmtDate(r.last_visit));
+      span.textContent = bits.join("   |   ");
+      btn.appendChild(strong); btn.appendChild(span);
+      btn.addEventListener("click", () => { cameFrom = "recalls"; openRecord(r.patient_id); });
+      box.appendChild(btn);
+    });
+    const missing = data.filter(r => !hasMailingAddress(r)).length;
+    recallNote(data.length === 0
+      ? "No recalls are due from " + fmtDate(a) + " to " + fmtDate(b) + "."
+      : data.length + (data.length === 1 ? " patient is" : " patients are") + " due from " + fmtDate(a) + " to " + fmtDate(b) + "." +
+        (missing ? " " + missing + " " + (missing === 1 ? "has" : "have") + " no mailing address." : ""));
+    $("recall-print-list").disabled = data.length === 0;
+  }
+  $("recall-show").addEventListener("click", loadRecalls);
+  [recallFrom, recallTo].forEach(el => el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); loadRecalls(); } }));
+
+  // The office copy: a plain list to keep, on full pages.
+  $("recall-print-list").addEventListener("click", () => {
+    const a = readDate(recallFrom), b = readDate(recallTo);
+    const rows = recallRows.map(r =>
+      "<tr><td>" + esc(fmtDate(r.recall_date)) + "</td><td><b>" + esc([r.last_name, r.first_name].filter(Boolean).join(", ")) + "</b></td><td>" +
+      (hasMailingAddress(r) ? esc([r.address, recallCity(r)].filter(Boolean).join(", ")) : "<i>no address</i>") + "</td><td>" +
+      esc(recallPhone(r)) + "</td><td>" + esc(fmtDate(r.last_visit)) + "</td></tr>").join("");
+    $("print-sheet").innerHTML = '<div class="rl"><h3>Recalls due ' + esc(fmtDate(a)) + " to " + esc(fmtDate(b)) +
+      " (" + recallRows.length + ")</h3><table><thead><tr><th>Recall date</th><th>Name</th><th>Address</th><th>Phone</th><th>Last visit</th></tr></thead><tbody>" +
+      rows + "</tbody></table></div>";
+    window.print();
   });
 
   /* ---------- Vendors ---------- */
@@ -1795,6 +1902,7 @@
       if (go === "menu") { show("menu"); checkDatabase(); }
       else if (go === "patients") goSearch(true);
       else if (go === "vendors") openVendorList();
+      else if (go === "recalls") openRecalls();
       else show(go);
     });
   });
