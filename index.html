@@ -667,8 +667,7 @@
   <section id="view-counts" class="hidden">
     <h2>Daily counts</h2>
     <div class="recrow">
-      <label>From <input type="text" id="count-from" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
-      <label>To <input type="text" id="count-to" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+      <label>Date <input type="text" id="count-date" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
       <button type="button" class="primary" id="count-show">Show</button>
       <button type="button" class="secondary" id="count-print" disabled>Print</button>
     </div>
@@ -1510,6 +1509,13 @@
     if (!(await ensureSaved("print"))) return;
     if (!(await countPopupIfNeeded())) return;      // asks what was sold, once per visit and once per new order line
     $("print-sheet").innerHTML = buildPrintSheet();
+    window.addEventListener("afterprint", function onAfterPrint() {
+      window.removeEventListener("afterprint", onAfterPrint);
+      pDirty = false; rDirty = false; oDirty = false;
+      clearMessages();
+      show("menu");
+      checkDatabase();
+    });
     window.print();
   });
 
@@ -1875,6 +1881,7 @@
     ["contacts", "Contacts", 0.5], ["misc", "Misc", 0.5]
   ];
   const countTotal = (c) => COUNT_BOXES.reduce((sum, [k, , w]) => sum + (Number(c[k]) || 0) * w, 0);
+  const TOTALS_LABEL = { complete_pair: "Complete" };   // shortened labels for the Daily counts screen/report only
   // Keeps only digits, so the quantity boxes can't hold anything but a whole number.
   const digitsOnly = (v) => v.replace(/\D/g, "");
   const fmtNum = (n) => (Math.round(n * 100) / 100).toString();
@@ -1939,8 +1946,14 @@
       };
       $("count-cancel").onclick = () => done(false);
       countModal.onkeydown = (e) => {
-        if (e.key === "Escape") done(false);
-        else if (e.key === "Enter" && e.target.tagName !== "BUTTON") { e.preventDefault(); $("count-ok").click(); }
+        if (e.key === "Escape") { done(false); return; }
+        if (e.key === "Enter" && e.target.tagName === "INPUT") {
+          e.preventDefault();
+          const inputs = Array.from(box.querySelectorAll("input"));
+          const idx = inputs.indexOf(e.target);
+          if (idx > -1 && idx < inputs.length - 1) inputs[idx + 1].focus();
+          else $("count-ok").click();
+        }
       };
       $("count-ok").onclick = async () => {
         $("count-ok").disabled = true;
@@ -1958,16 +1971,12 @@
   }
 
   /* --- Daily counts screen --- */
-  const countFrom = $("count-from"), countTo = $("count-to");
+  const countDate = $("count-date");
   let countRows = [], countSeq = 0;
 
   function openCounts() {
     show("counts");
-    if (!countFrom.value.trim() && !countTo.value.trim()) {
-      const past = new Date(); past.setDate(past.getDate() - 30);
-      setDate(countFrom, past.toISOString().slice(0, 10));
-      setDate(countTo, todayISO());
-    }
+    if (!countDate.value.trim()) setDate(countDate, todayISO());
     loadCounts();
   }
   function countNote(text, bad) {
@@ -1982,10 +1991,10 @@
     box.innerHTML = "";
     const grid = document.createElement("div");
     grid.className = "ctotals";
-    COUNT_BOXES.forEach(([key, label, weight]) => {
+    COUNT_BOXES.forEach(([key, label]) => {
       const n = countRows.reduce((s, c) => s + (Number(c[key]) || 0), 0);
       const d = document.createElement("div");
-      d.innerHTML = "<span>" + esc(label) + "</span><b>" + n + "</b><small>" + (weight === 1 ? "counts 1 each" : "counts \u00bd each") + "</small>";
+      d.innerHTML = "<span>" + esc(TOTALS_LABEL[key] || label) + "</span><b>" + n + "</b>";
       grid.appendChild(d);
     });
     const tot = document.createElement("div");
@@ -1997,33 +2006,22 @@
 
   async function loadCounts() {
     const mine = ++countSeq;
-    const a = readDate(countFrom), b = readDate(countTo);
+    const a = readDate(countDate);
     $("count-results").innerHTML = ""; $("count-totals").innerHTML = "";
     $("count-print").disabled = true;
-    if (a === null || b === null) { countNote("Enter dates as six digits, like 01/02/27.", true); return; }
-    if (!a || !b) { countNote("Enter a From date and a To date."); return; }
-    if (a > b) { countNote("The From date is after the To date.", true); return; }
+    if (a === null) { countNote("Enter the date as six digits, like 01/02/27.", true); return; }
+    if (!a) { countNote("Enter a date."); return; }
     countNote("Looking...");
-    const { data, error } = await db.rpc("counts_between", { from_date: a, to_date: b });
+    const { data, error } = await db.rpc("counts_between", { from_date: a, to_date: a });
     if (mine !== countSeq) return;
     if (error) { countNote("The counts didn't load. Check the internet connection and try again.", true); return; }
     countRows = data;
-    const same = a === b;
     countNote(data.length === 0
-      ? "Nothing was counted " + (same ? "on " + fmtDate(a) : "from " + fmtDate(a) + " to " + fmtDate(b)) + "."
-      : "Counted " + (same ? "on " + fmtDate(a) : "from " + fmtDate(a) + " to " + fmtDate(b)) + ". Check a box or click the x below to fix a mistake.");
+      ? "Nothing was counted on " + fmtDate(a) + "."
+      : "Counted on " + fmtDate(a) + ". Check a box or click the x below to fix a mistake.");
     renderCountTotals();
     $("count-print").disabled = data.length === 0;
-    let lastDate = null;
-    data.forEach(c => {
-      if (c.count_date !== lastDate && !same) {
-        const h = document.createElement("div");
-        h.className = "cdate"; h.textContent = fmtDate(c.count_date);
-        $("count-results").appendChild(h);
-      }
-      lastDate = c.count_date;
-      $("count-results").appendChild(countRowEl(c));
-    });
+    data.forEach(c => $("count-results").appendChild(countRowEl(c)));
   }
 
   function countRowEl(c) {
@@ -2074,20 +2072,20 @@
   }
 
   $("count-show").addEventListener("click", loadCounts);
-  [countFrom, countTo].forEach(el => el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); loadCounts(); } }));
+  countDate.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); loadCounts(); } });
 
   // The printed report: totals, then who was counted.
   $("count-print").addEventListener("click", () => {
-    const a = readDate(countFrom), b = readDate(countTo);
-    const totalsRows = COUNT_BOXES.map(([key, label, weight]) =>
-      "<tr><td>" + esc(label) + "</td><td class=\"r\">" + countRows.reduce((s, c) => s + (Number(c[key]) || 0), 0) + "</td><td>" + (weight === 1 ? "counts 1 each" : "counts \u00bd each") + "</td></tr>").join("");
+    const a = readDate(countDate);
+    const totalsRows = COUNT_BOXES.map(([key, label]) =>
+      "<tr><td>" + esc(TOTALS_LABEL[key] || label) + "</td><td class=\"r\">" + countRows.reduce((s, c) => s + (Number(c[key]) || 0), 0) + "</td></tr>").join("");
     const detail = countRows.map(c =>
       "<tr><td>" + esc(fmtDate(c.count_date)) + "</td><td><b>" + esc([c.last_name, c.first_name].filter(Boolean).join(", ")) + "</b></td><td>" +
       (c.order_id ? "Order line" + (c.note ? ": " + esc(c.note) : "") : "Visit") + "</td><td>" +
-      esc(COUNT_BOXES.filter(([k]) => Number(c[k]) > 0).map(([k, l]) => (Number(c[k]) > 1 ? Number(c[k]) + " " + l : l)).join(", ")) + "</td><td class=\"r\">" + fmtNum(countTotal(c)) + "</td></tr>").join("");
-    $("print-sheet").innerHTML = '<div class="rl"><h3>Order count ' + (a === b ? esc(fmtDate(a)) : esc(fmtDate(a)) + " to " + esc(fmtDate(b))) + "</h3>" +
-      "<table style=\"width:60%\"><thead><tr><th>Kind</th><th>Count</th><th></th></tr></thead><tbody>" + totalsRows +
-      "<tr><td><b>Total</b></td><td class=\"r\"><b>" + fmtNum(countRows.reduce((s, c) => s + countTotal(c), 0)) + "</b></td><td></td></tr></tbody></table>" +
+      esc(COUNT_BOXES.filter(([k]) => Number(c[k]) > 0).map(([k, l]) => (Number(c[k]) > 1 ? Number(c[k]) + " " + (TOTALS_LABEL[k] || l) : (TOTALS_LABEL[k] || l))).join(", ")) + "</td><td class=\"r\">" + fmtNum(countTotal(c)) + "</td></tr>").join("");
+    $("print-sheet").innerHTML = '<div class="rl"><h3>Order count ' + esc(fmtDate(a)) + "</h3>" +
+      "<table style=\"width:60%\"><thead><tr><th>Kind</th><th>Count</th></tr></thead><tbody>" + totalsRows +
+      "<tr><td><b>Total</b></td><td class=\"r\"><b>" + fmtNum(countRows.reduce((s, c) => s + countTotal(c), 0)) + "</b></td></tr></tbody></table>" +
       "<h3 style=\"margin-top:12pt\">Counted items</h3><table><thead><tr><th>Date</th><th>Name</th><th>What</th><th>Boxes</th><th>Total</th></tr></thead><tbody>" + detail + "</tbody></table></div>";
     window.print();
   });
