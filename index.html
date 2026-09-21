@@ -114,15 +114,38 @@
   .lenstable tr.lensadd button { padding: 4px 12px; font-size: 10pt; }
   .lenstable tr.lensdivider td { position: static; }
   .lenstable td { padding: 0; border-bottom: 1px solid var(--line); background: #fbfcf6; }
-  .lenstable tbody tr:nth-child(even) td { background: #f3f6ea; }
+  .lenstable tbody tr.lensrow:nth-child(even) td { background: #f3f6ea; }   /* only the data rows stripe; never the section headings */
   .lenstable td input { width: 100%; border: 1px solid transparent; border-radius: 0; background: transparent; box-shadow: none; padding: 5px 6px; font-size: 10pt; }
   .lenstable td input:hover { border-color: #b9c4a0; }
   .lenstable td input:focus { background: var(--white); border-color: var(--blue); }
   .lenstable td input.bad { border-color: var(--red); background: #fbf3f2; }
   .lenstable td input.lensdesc { font-weight: bold; }
-  .lenstable tr.lensdivider td { background: var(--green); color: var(--white); font-weight: bold; padding: 6px 8px; letter-spacing: 0.3px; }
+  .lenstable tr.lensdivider td { background: #1b3d24; color: var(--white); font-weight: bold; padding: 6px 8px; letter-spacing: 0.3px; }
   .lensrm { border: 0; background: transparent; color: var(--red); font-size: 14pt; line-height: 1; padding: 2px 6px; cursor: pointer; }
   .lensrm:hover { background: #fbf3f2; }
+
+  /* Order counts */
+  .countbox { width: min(560px, 100%); max-height: 90vh; }
+  .countbox fieldset { margin: 0 0 10px; }
+  .countchecks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; padding: 4px 2px; }
+  .qtybox { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: normal; }
+  .countchecks .qtybox { font-size: 12pt; }
+  .qtybox input { width: 46px; text-align: center; padding: 4px 2px; }
+  .countbtns { display: flex; gap: 10px; margin-top: 8px; }
+  .ctotals { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 0 0 16px; }
+  .ctotals > div { background: var(--white); border: 1px solid var(--line); border-left: 5px solid var(--blue); border-radius: var(--r); box-shadow: var(--shadow); padding: 8px 10px; display: grid; gap: 1px; }
+  .ctotals > div.ctotal { border-left-color: var(--green); background: #f2f8f3; }
+  .ctotals span { color: var(--muted); font-size: 11pt; }
+  .ctotals b { font-size: 20pt; line-height: 1.1; }
+  .ctotals small { color: var(--muted); font-size: 9pt; }
+  .cresults { display: grid; gap: 6px; margin: 0 0 18px; }
+  .cdate { font-weight: bold; color: var(--green); margin: 10px 0 0; }
+  .crow { display: grid; grid-template-columns: minmax(180px, 1.4fr) repeat(5, auto) 30px; gap: 4px 14px; align-items: center; background: var(--white); border: 1px solid var(--line); border-left: 5px solid var(--green); border-radius: var(--r); box-shadow: var(--shadow); padding: 6px 10px; }
+  .crow .qtybox { font-size: 10.5pt; white-space: nowrap; }
+  .crow .qtybox input { width: 40px; text-align: center; padding: 3px 2px; }
+  .cwho { text-align: left; background: transparent; border: 0; padding: 0; display: grid; gap: 1px; color: var(--ink); cursor: pointer; }
+  .cwho span { color: var(--muted); font-size: 10pt; }
+  @media (max-width: 900px) { .ctotals { grid-template-columns: repeat(2, 1fr); } .crow { grid-template-columns: 1fr 1fr; } }
 
   /* Recalls */
   .recrow { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
@@ -407,7 +430,7 @@
       <div class="vtop">
         <div class="vwho"><strong id="r-title">New patient</strong></div>
         <div class="vbtns">
-          <button type="button" class="secondary" id="r-back-btn">Back to search</button>
+          <button type="button" class="secondary" id="r-back-btn">Main menu</button>
           <span class="rstatus" id="r-status" role="status"></span>
           <span class="error" id="r-error" role="alert"></span>
         </div>
@@ -642,11 +665,17 @@
   </section>
 
   <section id="view-counts" class="hidden">
-    <div class="panel">
-      <h2>Daily counts</h2>
-      <p>This screen isn't built yet. It comes after the note bar and the Print popup.</p>
+    <h2>Daily counts</h2>
+    <div class="recrow">
+      <label>From <input type="text" id="count-from" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+      <label>To <input type="text" id="count-to" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+      <button type="button" class="primary" id="count-show">Show</button>
+      <button type="button" class="secondary" id="count-print" disabled>Print</button>
     </div>
-    <button type="button" class="secondary back" data-go="menu">Back to main menu</button>
+    <p class="note" id="count-note"></p>
+    <div id="count-totals"></div>
+    <div id="count-results" class="cresults"></div>
+    <button type="button" class="secondary" data-go="menu">Back to main menu</button>
   </section>
 
 </main>
@@ -664,6 +693,20 @@
         <colgroup><col style="width:240px"><col><col><col><col><col><col><col><col><col><col style="width:30px"></colgroup>
         <tbody id="lens-body"></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<div id="count-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="What was sold">
+  <div class="modalbox countbox">
+    <div class="modalhead"><h2>What was sold?</h2><span id="count-who" class="note"></span></div>
+    <div class="modalscroll">
+      <div id="count-items"></div>
+      <p class="error" id="count-error" role="alert"></p>
+      <div class="countbtns">
+        <button type="button" class="primary" id="count-ok">OK, print</button>
+        <button type="button" class="secondary" id="count-cancel">Cancel</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1068,7 +1111,7 @@
     showRx();
     clearMessages();
     cameFrom = "search";
-    $("r-back-btn").textContent = "Back to search";
+    $("r-back-btn").textContent = "Main menu";
     show("record");
     pin.last_name.focus();
   }
@@ -1090,7 +1133,7 @@
     fillPatient(data);
     showRx();
     clearMessages();
-    $("r-back-btn").textContent = cameFrom === "checked" ? "Back to list" : cameFrom === "recalls" ? "Back to recalls" : "Back to search";
+    $("r-back-btn").textContent = cameFrom === "checked" ? "Back to list" : cameFrom === "recalls" ? "Back to recalls" : cameFrom === "counts" ? "Back to counts" : "Main menu";
     show("record");
   }
 
@@ -1299,7 +1342,8 @@
     clearMessages();
     if (cameFrom === "checked" && checkedFind) { show("checked"); loadChecked(Math.max(checkedLoaded, CHECK_PAGE)); }
     else if (cameFrom === "recalls") { show("recalls"); loadRecalls(); }
-    else goSearch(false);
+    else if (cameFrom === "counts") { show("counts"); loadCounts(); }
+    else { show("menu"); checkDatabase(); }
   });
 
   window.addEventListener("beforeunload", (e) => { if (anyDirty()) { e.preventDefault(); e.returnValue = ""; } });
@@ -1464,6 +1508,7 @@
 
   $("print-btn").addEventListener("click", async () => {
     if (!(await ensureSaved("print"))) return;
+    if (!(await countPopupIfNeeded())) return;      // asks what was sold, once per visit and once per new order line
     $("print-sheet").innerHTML = buildPrintSheet();
     window.print();
   });
@@ -1483,7 +1528,9 @@
 
   function goSearch(focus) {
     show("patients");
-    if (searchInput.value.trim()) runSearch();
+    searchInput.value = "";
+    resultsEl.innerHTML = "";
+    setNote("Type part of a name, or a birthday as six digits like 01/02/65. Matches appear as you type.");
     if (focus !== false) searchInput.focus();
   }
 
@@ -1658,9 +1705,16 @@
   ];
   const SHEET_SECTIONS = [
     { key: "lens", title: "Lenses", table: "lens_prices", cols: LENS_COLS, isContact: false },
-    { key: "info", title: "Contact lenses", table: "contact_lens_info", cols: CONTACT_COLS },
-    { key: "packs", title: "Contact lens pack prices", table: "lens_prices", cols: LENS_COLS, isContact: true }
+    { key: "info", title: "Contact lenses", table: "contact_lens_info", cols: CONTACT_COLS }
   ];
+  // A to Z, ignoring case, blanks last (so a new row you're still typing sits at the end, not scattered)
+  const alphaByDescription = (rows) => rows.slice().sort((a, b) => {
+    const x = (a.description || "").toLowerCase(), y = (b.description || "").toLowerCase();
+    if (x === "" && y === "") return 0;
+    if (x === "") return 1;
+    if (y === "") return -1;
+    return x < y ? -1 : x > y ? 1 : 0;
+  });
   const lensModal = $("lens-modal"), lensBody = $("lens-body");
 
   function lensStatus(kind, text) {
@@ -1723,12 +1777,12 @@
     lensStatus("", "Loading...");
     lensBody.innerHTML = "";
     const [lensRes, infoRes] = await Promise.all([
-      db.from("lens_prices").select("*").order("sort_order").order("id"),
-      db.from("contact_lens_info").select("*").order("sort_order").order("id")
+      db.from("lens_prices").select("*"),
+      db.from("contact_lens_info").select("*")
     ]);
     if (lensRes.error || infoRes.error) { lensStatus("bad", "The price sheet didn't load. Check the internet connection and try again."); return; }
     SHEET_SECTIONS.forEach(section => {
-      const rows = section.table === "contact_lens_info" ? infoRes.data : lensRes.data.filter(r => !!r.is_contact === section.isContact);
+      const rows = alphaByDescription(section.table === "contact_lens_info" ? infoRes.data : lensRes.data.filter(r => !!r.is_contact === section.isContact));
       const { div, heads, add } = sheetHeadingEls(section);
       lensBody.appendChild(div); lensBody.appendChild(heads);
       rows.forEach(r => lensBody.appendChild(sheetRowEl(r, section)));
@@ -1773,22 +1827,34 @@
     const { error } = await db.from(tr.dataset.table).update({ [inp.dataset.key]: inp.dataset.key === "description" ? value : (value === "" ? null : value) }).eq("id", tr.dataset.id);
     if (error) { inp.classList.add("bad"); lensStatus("bad", "That change didn't save. Check the internet connection and try again."); return; }
     lensStatus("ok", "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+    // A changed description can move the row, so put it back in alphabetical order without losing your place.
+    if (inp.dataset.key === "description") reorderSheetRow(tr, value);
   });
 
-  // New rows go at the end of their own section
+  // Moves one row to its correct alphabetical spot within its own section, without reloading the whole sheet.
+  function reorderSheetRow(tr, description) {
+    const key = (description || "").toLowerCase();
+    const sameSection = [...lensBody.querySelectorAll('tr.lensrow[data-section="' + tr.dataset.section + '"]')].filter(r => r !== tr);
+    let before = null;
+    for (const r of sameSection) {
+      const d = (r.querySelector(".lensdesc").value || "").toLowerCase();
+      if (key !== "" && (d === "" || key < d)) { before = r; break; }
+    }
+    if (!before) before = lensBody.querySelector('tr.lensadd[data-section="' + tr.dataset.section + '"]');
+    if (before && before !== tr.nextElementSibling) lensBody.insertBefore(tr, before);
+  }
+
+  // A blank new row sits right above its section's "+ Add a row" line until you type a description.
+  // Leaving that box re-sorts it into its alphabetical place, along with everyone else already open.
   async function addSheetRow(section, addTr) {
-    let q = db.from(section.table).select("sort_order");
-    if (section.isContact !== undefined) q = q.eq("is_contact", section.isContact);
-    const { data: top } = await q.order("sort_order", { ascending: false }).limit(1);
-    const next = (top && top[0] ? top[0].sort_order : 0) + 1;
-    const rec = { sort_order: next, description: "" };
+    const rec = { description: "" };
     if (section.isContact !== undefined) rec.is_contact = section.isContact;
     const { data, error } = await db.from(section.table).insert(rec).select().single();
     if (error) { lensStatus("bad", "Couldn't add a row. Check the internet connection and try again."); return; }
     $("lens-search").value = ""; $("lens-search").dispatchEvent(new Event("input"));
     const tr = sheetRowEl(data, section);
     lensBody.insertBefore(tr, addTr);
-    tr.querySelector("input").focus();
+    tr.querySelector(".lensdesc").focus();
     tr.scrollIntoView({ block: "nearest" });
     lensStatus("ok", "Row added. Type the description.");
   }
@@ -1801,6 +1867,230 @@
     tr.remove();
     lensStatus("ok", "Removed.");
   }
+
+  /* ---------- Order counts: the popup when you print, and the Daily counts screen ---------- */
+  // A complete pair counts as one. Each of the others counts as a half. Change the numbers here if that ever changes.
+  const COUNT_BOXES = [
+    ["complete_pair", "Complete pair", 1], ["lenses", "Lenses", 0.5], ["frame", "Frame", 0.5],
+    ["contacts", "Contacts", 0.5], ["misc", "Misc", 0.5]
+  ];
+  const countTotal = (c) => COUNT_BOXES.reduce((sum, [k, , w]) => sum + (Number(c[k]) || 0) * w, 0);
+  // Keeps only digits, so the quantity boxes can't hold anything but a whole number.
+  const digitsOnly = (v) => v.replace(/\D/g, "");
+  const fmtNum = (n) => (Math.round(n * 100) / 100).toString();
+  const countModal = $("count-modal");
+
+  // Asks what was sold, for the things on this visit that haven't been counted yet.
+  // Shows only for the patient's newest visit: the first time it's printed, and again when an order line has been added since.
+  // Returns true when it's fine to go on and print, false if you cancelled.
+  async function countPopupIfNeeded() {
+    if (patientId === null || rxIndex !== 0 || !rxRows[0]) return true;
+    const rx = rxRows[0];
+    const [cRes, oRes] = await Promise.all([
+      db.from("counts").select("count_id,order_id,created_at").eq("prescription_id", rx.prescription_id),
+      db.from("orders").select("order_id,nb_date,nb_note,created_at").eq("prescription_id", rx.prescription_id).order("order_id")
+    ]);
+    if (cRes.error || oRes.error) {
+      return confirm("Couldn't check the order count. Check the internet connection.\n\nPrint anyway, without counting?");
+    }
+    const visitCount = cRes.data.find(c => c.order_id == null);
+    const counted = new Set(cRes.data.filter(c => c.order_id != null).map(c => c.order_id));
+    const items = [];
+    if (!visitCount) {
+      items.push({ order_id: null, date: rx.service_date, title: "This visit, " + fmtDate(rx.service_date) });
+    } else {
+      const since = Date.parse(visitCount.created_at);
+      oRes.data.filter(o => !counted.has(o.order_id) && Date.parse(o.created_at) > since).forEach(o =>
+        items.push({ order_id: o.order_id, date: o.nb_date || rx.service_date, title: "New order line " + fmtDate(o.nb_date) + (o.nb_note ? ": " + o.nb_note : "") }));
+    }
+    if (!items.length) return true;
+    return new Promise((resolve) => {
+      const box = $("count-items");
+      box.innerHTML = "";
+      items.forEach(it => {
+        const fs = document.createElement("fieldset");
+        const lg = document.createElement("legend");
+        lg.textContent = it.title;
+        fs.appendChild(lg);
+        const checks = document.createElement("div");
+        checks.className = "countchecks";
+        COUNT_BOXES.forEach(([key, label]) => {
+          const lab = document.createElement("label");
+          lab.className = "qtybox";
+          const inp = document.createElement("input");
+          inp.type = "text"; inp.inputMode = "numeric"; inp.maxLength = 3; inp.dataset.key = key;
+          inp.addEventListener("input", () => { const d = digitsOnly(inp.value); if (inp.value !== d) inp.value = d; });
+          lab.appendChild(document.createTextNode(label)); lab.appendChild(inp);
+          checks.appendChild(lab);
+        });
+        fs.appendChild(checks);
+        it.el = fs;
+        box.appendChild(fs);
+      });
+      $("count-who").textContent = [pin.first_name.value.trim(), pin.last_name.value.trim()].filter(Boolean).join(" ");
+      $("count-error").textContent = "";
+      countModal.classList.remove("hidden");
+      const first = box.querySelector("input");
+      if (first) first.focus();
+      const done = (result) => {
+        countModal.classList.add("hidden");
+        $("count-ok").onclick = null; $("count-cancel").onclick = null; countModal.onkeydown = null;
+        resolve(result);
+      };
+      $("count-cancel").onclick = () => done(false);
+      countModal.onkeydown = (e) => {
+        if (e.key === "Escape") done(false);
+        else if (e.key === "Enter" && e.target.tagName !== "BUTTON") { e.preventDefault(); $("count-ok").click(); }
+      };
+      $("count-ok").onclick = async () => {
+        $("count-ok").disabled = true;
+        const rows = items.map(it => {
+          const rec = { prescription_id: rx.prescription_id, order_id: it.order_id, count_date: it.date };
+          it.el.querySelectorAll("input").forEach(inp => { rec[inp.dataset.key] = inp.value.trim() === "" ? 0 : parseInt(inp.value, 10); });
+          return rec;
+        });
+        const { error } = await db.from("counts").insert(rows);
+        $("count-ok").disabled = false;
+        if (error) { $("count-error").textContent = "Couldn't save the count. Check the internet connection and try again."; return; }
+        done(true);
+      };
+    });
+  }
+
+  /* --- Daily counts screen --- */
+  const countFrom = $("count-from"), countTo = $("count-to");
+  let countRows = [], countSeq = 0;
+
+  function openCounts() {
+    show("counts");
+    if (!countFrom.value.trim() && !countTo.value.trim()) {
+      const past = new Date(); past.setDate(past.getDate() - 30);
+      setDate(countFrom, past.toISOString().slice(0, 10));
+      setDate(countTo, todayISO());
+    }
+    loadCounts();
+  }
+  function countNote(text, bad) {
+    const n = $("count-note");
+    n.textContent = text;
+    n.style.color = bad ? "var(--red)" : "";
+    n.style.fontWeight = bad ? "bold" : "";
+  }
+
+  function renderCountTotals() {
+    const box = $("count-totals");
+    box.innerHTML = "";
+    const grid = document.createElement("div");
+    grid.className = "ctotals";
+    COUNT_BOXES.forEach(([key, label, weight]) => {
+      const n = countRows.reduce((s, c) => s + (Number(c[key]) || 0), 0);
+      const d = document.createElement("div");
+      d.innerHTML = "<span>" + esc(label) + "</span><b>" + n + "</b><small>" + (weight === 1 ? "counts 1 each" : "counts \u00bd each") + "</small>";
+      grid.appendChild(d);
+    });
+    const tot = document.createElement("div");
+    tot.className = "ctotal";
+    tot.innerHTML = "<span>Total</span><b>" + fmtNum(countRows.reduce((s, c) => s + countTotal(c), 0)) + "</b><small>" + countRows.length + " counted " + (countRows.length === 1 ? "item" : "items") + "</small>";
+    grid.appendChild(tot);
+    box.appendChild(grid);
+  }
+
+  async function loadCounts() {
+    const mine = ++countSeq;
+    const a = readDate(countFrom), b = readDate(countTo);
+    $("count-results").innerHTML = ""; $("count-totals").innerHTML = "";
+    $("count-print").disabled = true;
+    if (a === null || b === null) { countNote("Enter dates as six digits, like 01/02/27.", true); return; }
+    if (!a || !b) { countNote("Enter a From date and a To date."); return; }
+    if (a > b) { countNote("The From date is after the To date.", true); return; }
+    countNote("Looking...");
+    const { data, error } = await db.rpc("counts_between", { from_date: a, to_date: b });
+    if (mine !== countSeq) return;
+    if (error) { countNote("The counts didn't load. Check the internet connection and try again.", true); return; }
+    countRows = data;
+    const same = a === b;
+    countNote(data.length === 0
+      ? "Nothing was counted " + (same ? "on " + fmtDate(a) : "from " + fmtDate(a) + " to " + fmtDate(b)) + "."
+      : "Counted " + (same ? "on " + fmtDate(a) : "from " + fmtDate(a) + " to " + fmtDate(b)) + ". Check a box or click the x below to fix a mistake.");
+    renderCountTotals();
+    $("count-print").disabled = data.length === 0;
+    let lastDate = null;
+    data.forEach(c => {
+      if (c.count_date !== lastDate && !same) {
+        const h = document.createElement("div");
+        h.className = "cdate"; h.textContent = fmtDate(c.count_date);
+        $("count-results").appendChild(h);
+      }
+      lastDate = c.count_date;
+      $("count-results").appendChild(countRowEl(c));
+    });
+  }
+
+  function countRowEl(c) {
+    const row = document.createElement("div");
+    row.className = "crow";
+    const who = document.createElement("button");
+    who.type = "button"; who.className = "cwho";
+    const strong = document.createElement("strong");
+    strong.textContent = [c.last_name, c.first_name].filter(Boolean).join(", ");
+    const span = document.createElement("span");
+    span.textContent = c.order_id ? "Order line" + (c.note ? ": " + c.note : "") : "Visit";
+    who.appendChild(strong); who.appendChild(span);
+    who.addEventListener("click", () => { cameFrom = "counts"; openRecord(c.patient_id); });
+    row.appendChild(who);
+    COUNT_BOXES.forEach(([key, label]) => {
+      const lab = document.createElement("label");
+      lab.className = "qtybox";
+      const inp = document.createElement("input");
+      inp.type = "text"; inp.inputMode = "numeric"; inp.maxLength = 3;
+      inp.value = Number(c[key]) || 0;
+      const prior = { v: inp.value };
+      inp.addEventListener("input", () => { const d = digitsOnly(inp.value); if (inp.value !== d) inp.value = d; });
+      inp.addEventListener("change", async () => {
+        const v = inp.value.trim() === "" ? 0 : parseInt(inp.value, 10);
+        inp.value = v;
+        const { error } = await db.from("counts").update({ [key]: v }).eq("count_id", c.count_id);
+        if (error) { inp.value = prior.v; countNote("That change didn't save. Check the internet connection and try again.", true); return; }
+        prior.v = String(v);
+        c[key] = v;
+        renderCountTotals();
+      });
+      lab.appendChild(document.createTextNode(label)); lab.appendChild(inp);
+      row.appendChild(lab);
+    });
+    const rm = document.createElement("button");
+    rm.type = "button"; rm.className = "lensrm"; rm.textContent = "\u00d7"; rm.title = "Remove this count";
+    rm.addEventListener("click", async () => {
+      if (!confirm("Remove this count for " + [c.first_name, c.last_name].filter(Boolean).join(" ") + "? It will ask again the next time that visit is printed.")) return;
+      const { error } = await db.from("counts").delete().eq("count_id", c.count_id);
+      if (error) { countNote("Couldn't remove it. Check the internet connection and try again.", true); return; }
+      countRows = countRows.filter(x => x !== c);
+      row.remove();
+      renderCountTotals();
+      $("count-print").disabled = countRows.length === 0;
+    });
+    row.appendChild(rm);
+    return row;
+  }
+
+  $("count-show").addEventListener("click", loadCounts);
+  [countFrom, countTo].forEach(el => el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); loadCounts(); } }));
+
+  // The printed report: totals, then who was counted.
+  $("count-print").addEventListener("click", () => {
+    const a = readDate(countFrom), b = readDate(countTo);
+    const totalsRows = COUNT_BOXES.map(([key, label, weight]) =>
+      "<tr><td>" + esc(label) + "</td><td class=\"r\">" + countRows.reduce((s, c) => s + (Number(c[key]) || 0), 0) + "</td><td>" + (weight === 1 ? "counts 1 each" : "counts \u00bd each") + "</td></tr>").join("");
+    const detail = countRows.map(c =>
+      "<tr><td>" + esc(fmtDate(c.count_date)) + "</td><td><b>" + esc([c.last_name, c.first_name].filter(Boolean).join(", ")) + "</b></td><td>" +
+      (c.order_id ? "Order line" + (c.note ? ": " + esc(c.note) : "") : "Visit") + "</td><td>" +
+      esc(COUNT_BOXES.filter(([k]) => Number(c[k]) > 0).map(([k, l]) => (Number(c[k]) > 1 ? Number(c[k]) + " " + l : l)).join(", ")) + "</td><td class=\"r\">" + fmtNum(countTotal(c)) + "</td></tr>").join("");
+    $("print-sheet").innerHTML = '<div class="rl"><h3>Order count ' + (a === b ? esc(fmtDate(a)) : esc(fmtDate(a)) + " to " + esc(fmtDate(b))) + "</h3>" +
+      "<table style=\"width:60%\"><thead><tr><th>Kind</th><th>Count</th><th></th></tr></thead><tbody>" + totalsRows +
+      "<tr><td><b>Total</b></td><td class=\"r\"><b>" + fmtNum(countRows.reduce((s, c) => s + countTotal(c), 0)) + "</b></td><td></td></tr></tbody></table>" +
+      "<h3 style=\"margin-top:12pt\">Counted items</h3><table><thead><tr><th>Date</th><th>Name</th><th>What</th><th>Boxes</th><th>Total</th></tr></thead><tbody>" + detail + "</tbody></table></div>";
+    window.print();
+  });
 
   /* ---------- Recalls: who is due for a recall card between two dates ---------- */
   const recallFrom = $("recall-from"), recallTo = $("recall-to");
@@ -2159,6 +2449,7 @@
       else if (go === "patients") goSearch(true);
       else if (go === "vendors") openVendorList();
       else if (go === "recalls") openRecalls();
+      else if (go === "counts") openCounts();
       else show(go);
     });
   });
