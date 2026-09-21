@@ -96,6 +96,34 @@
   .menu button.vendors { border-left-color: var(--red); }
   .menu button.vendors:hover { background: #fbf3f2; }
 
+  /* Lens price sheet */
+  .lensline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+  main.wide .lensline button { padding: 5px 12px; white-space: nowrap; }
+  .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 2vw; }
+  .modalbox { background: var(--white); border-radius: var(--r); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); width: min(1420px, 100%); max-height: 92vh; display: flex; flex-direction: column; font-size: 10pt; }
+  .modalhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .modalhead h2 { font-size: 13pt; margin: 0; }
+  .modalhead input[type=search] { width: 200px; padding: 5px 8px; font-size: 10pt; }
+  .modalhead .rstatus { flex: 1 1 200px; }
+  .modalhead .rstatus.bad { color: var(--red); font-weight: bold; }
+  .modalhead button { padding: 6px 14px; }
+  .modalscroll { overflow: auto; padding: 10px 14px 14px; }
+  .lenstable { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; min-width: 1330px; }
+  .lenstable tr.lensheads th { background: #dfe9d3; color: var(--green); text-align: left; padding: 5px 6px; font-size: 10pt; border-bottom: 1px solid var(--green); }
+  .lenstable tr.lensadd td { background: transparent; padding: 6px 4px 14px; border-bottom: 0; }
+  .lenstable tr.lensadd button { padding: 4px 12px; font-size: 10pt; }
+  .lenstable tr.lensdivider td { position: static; }
+  .lenstable td { padding: 0; border-bottom: 1px solid var(--line); background: #fbfcf6; }
+  .lenstable tbody tr:nth-child(even) td { background: #f3f6ea; }
+  .lenstable td input { width: 100%; border: 1px solid transparent; border-radius: 0; background: transparent; box-shadow: none; padding: 5px 6px; font-size: 10pt; }
+  .lenstable td input:hover { border-color: #b9c4a0; }
+  .lenstable td input:focus { background: var(--white); border-color: var(--blue); }
+  .lenstable td input.bad { border-color: var(--red); background: #fbf3f2; }
+  .lenstable td input.lensdesc { font-weight: bold; }
+  .lenstable tr.lensdivider td { background: var(--green); color: var(--white); font-weight: bold; padding: 6px 8px; letter-spacing: 0.3px; }
+  .lensrm { border: 0; background: transparent; color: var(--red); font-size: 14pt; line-height: 1; padding: 2px 6px; cursor: pointer; }
+  .lensrm:hover { background: #fbf3f2; }
+
   /* Recalls */
   .recrow { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
   .recrow label { width: 150px; }
@@ -490,7 +518,10 @@
           <fieldset>
             <legend>Lens, misc, and frame details</legend>
             <div class="vdesc">
-              <label class="drow"><span class="tag tb">Lens type</span><input type="text" id="v_lens_type" autocomplete="off"></label>
+              <div class="lensline">
+                <label class="drow"><span class="tag tb">Lens type</span><input type="text" id="v_lens_type" autocomplete="off"></label>
+                <button type="button" class="secondary" id="lens-btn">Lens prices</button>
+              </div>
               <label class="drow"><span class="tag tb">Misc</span><input type="text" id="v_misc" autocomplete="off"></label>
               <label class="drow"><span class="tag tb">Frame</span><input type="text" id="v_frame" autocomplete="off"></label>
             </div>
@@ -619,6 +650,23 @@
   </section>
 
 </main>
+
+<div id="lens-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Lens and contact lens prices">
+  <div class="modalbox">
+    <div class="modalhead">
+      <h2>Lens and contact lens prices</h2>
+      <input type="search" id="lens-search" placeholder="Search" autocomplete="off" aria-label="Search the price sheet">
+      <span class="rstatus" id="lens-status" role="status"></span>
+      <button type="button" class="primary" id="lens-close">Close</button>
+    </div>
+    <div class="modalscroll">
+      <table class="lenstable">
+        <colgroup><col style="width:240px"><col><col><col><col><col><col><col><col><col><col style="width:30px"></colgroup>
+        <tbody id="lens-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 <div id="print-sheet"></div>
 
@@ -1597,6 +1645,162 @@
     const typed = searchInput.value.trim().split(/\s+/)[0] || "";
     openNewRecord(/^[A-Za-z'-]+$/.test(typed) ? typed : "");
   });
+
+  /* ---------- Price sheet: lenses, contact lenses, and contact lens pack prices (every box can be edited) ---------- */
+  const LENS_COLS = [
+    ["description", "Description"], ["plastic", "Plastic"], ["glass", "Glass"], ["polycarbonate", "Polycarbonate"],
+    ["photo_x", "Photo-X"], ["transition", "Transition"], ["poly_trans", "Poly Trans"], ["trivex", "Trivex"],
+    ["index_167", "1.67"], ["index_174", "1.74"]
+  ];
+  const CONTACT_COLS = [
+    ["description", "Description"], ["quantity", "Quantity"], ["base_curves", "Base Curves"], ["diameter", "Diameter"],
+    ["powers", "Powers"], ["cylinder", "Cylinder"], ["axis", "Axis"], ["wear", "Wear"], ["colors", "Colors"], ["price", "Price"]
+  ];
+  const SHEET_SECTIONS = [
+    { key: "lens", title: "Lenses", table: "lens_prices", cols: LENS_COLS, isContact: false },
+    { key: "info", title: "Contact lenses", table: "contact_lens_info", cols: CONTACT_COLS },
+    { key: "packs", title: "Contact lens pack prices", table: "lens_prices", cols: LENS_COLS, isContact: true }
+  ];
+  const lensModal = $("lens-modal"), lensBody = $("lens-body");
+
+  function lensStatus(kind, text) {
+    const el = $("lens-status");
+    el.className = "rstatus " + kind;
+    el.textContent = text;
+  }
+
+  function sheetRowEl(rec, section) {
+    const tr = document.createElement("tr");
+    tr.className = "lensrow";
+    tr.dataset.id = rec.id;
+    tr.dataset.table = section.table;
+    tr.dataset.section = section.key;
+    section.cols.forEach(([key, label]) => {
+      const td = document.createElement("td");
+      const inp = document.createElement("input");
+      inp.type = "text"; inp.autocomplete = "off";
+      inp.value = rec[key] == null ? "" : rec[key];
+      inp.dataset.key = key;
+      inp.setAttribute("aria-label", label);
+      if (key === "description") inp.className = "lensdesc";
+      td.appendChild(inp);
+      tr.appendChild(td);
+    });
+    const td = document.createElement("td");
+    const rm = document.createElement("button");
+    rm.type = "button"; rm.className = "lensrm"; rm.textContent = "×"; rm.title = "Remove this row";
+    rm.tabIndex = -1;
+    rm.addEventListener("click", () => removeSheetRow(tr));
+    td.appendChild(rm); tr.appendChild(td);
+    return tr;
+  }
+
+  // The green heading, the column names, and the "add a row" line that go with each section
+  function sheetHeadingEls(section) {
+    const div = document.createElement("tr");
+    div.className = "lensdivider"; div.dataset.section = section.key;
+    const dtd = document.createElement("td");
+    dtd.colSpan = section.cols.length + 1; dtd.textContent = section.title;
+    div.appendChild(dtd);
+    const heads = document.createElement("tr");
+    heads.className = "lensheads"; heads.dataset.section = section.key;
+    section.cols.forEach(([, label]) => { const th = document.createElement("th"); th.textContent = label; heads.appendChild(th); });
+    heads.appendChild(document.createElement("th"));
+    const add = document.createElement("tr");
+    add.className = "lensadd"; add.dataset.section = section.key;
+    const atd = document.createElement("td");
+    atd.colSpan = section.cols.length + 1;
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "secondary"; btn.textContent = "+ Add a row";
+    btn.addEventListener("click", () => addSheetRow(section, add));
+    atd.appendChild(btn); add.appendChild(atd);
+    return { div, heads, add };
+  }
+
+  async function openLensSheet() {
+    lensModal.classList.remove("hidden");
+    $("lens-search").value = "";
+    lensStatus("", "Loading...");
+    lensBody.innerHTML = "";
+    const [lensRes, infoRes] = await Promise.all([
+      db.from("lens_prices").select("*").order("sort_order").order("id"),
+      db.from("contact_lens_info").select("*").order("sort_order").order("id")
+    ]);
+    if (lensRes.error || infoRes.error) { lensStatus("bad", "The price sheet didn't load. Check the internet connection and try again."); return; }
+    SHEET_SECTIONS.forEach(section => {
+      const rows = section.table === "contact_lens_info" ? infoRes.data : lensRes.data.filter(r => !!r.is_contact === section.isContact);
+      const { div, heads, add } = sheetHeadingEls(section);
+      lensBody.appendChild(div); lensBody.appendChild(heads);
+      rows.forEach(r => lensBody.appendChild(sheetRowEl(r, section)));
+      lensBody.appendChild(add);
+    });
+    lensStatus("", "Click any box to change it. It saves when you leave the box.");
+    $("lens-search").focus();
+  }
+  function closeLensSheet() {
+    if (document.activeElement && lensModal.contains(document.activeElement)) document.activeElement.blur();   // saves a change still in progress
+    lensModal.classList.add("hidden");
+  }
+  $("lens-btn").addEventListener("click", openLensSheet);
+  $("lens-close").addEventListener("click", closeLensSheet);
+  lensModal.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLensSheet(); });
+  lensModal.addEventListener("mousedown", (e) => { if (e.target === lensModal) closeLensSheet(); });
+
+  // Search: shows only the rows with your words in any box, and hides a section that has none
+  $("lens-search").addEventListener("input", () => {
+    const words = $("lens-search").value.toLowerCase().split(/\s+/).filter(Boolean);
+    [...lensBody.querySelectorAll("tr.lensrow")].forEach(tr => {
+      const text = [...tr.querySelectorAll("input")].map(i => i.value.toLowerCase()).join(" ");
+      tr.classList.toggle("hidden", !words.every(w => text.includes(w)));
+    });
+    SHEET_SECTIONS.forEach(section => {
+      const rows = [...lensBody.querySelectorAll('tr.lensrow[data-section="' + section.key + '"]')];
+      const any = rows.some(r => !r.classList.contains("hidden"));
+      lensBody.querySelectorAll('tr.lensdivider[data-section="' + section.key + '"], tr.lensheads[data-section="' + section.key + '"]')
+        .forEach(tr => tr.classList.toggle("hidden", words.length > 0 && !any));
+      lensBody.querySelectorAll('tr.lensadd[data-section="' + section.key + '"]').forEach(tr => tr.classList.toggle("hidden", words.length > 0));
+    });
+  });
+
+  // A change is saved as soon as you leave the box
+  lensBody.addEventListener("change", async (e) => {
+    const inp = e.target;
+    if (!inp.dataset || !inp.dataset.key) return;
+    const tr = inp.closest("tr");
+    lensStatus("busy", "Saving...");
+    inp.classList.remove("bad");
+    const value = inp.value.trim();
+    const { error } = await db.from(tr.dataset.table).update({ [inp.dataset.key]: inp.dataset.key === "description" ? value : (value === "" ? null : value) }).eq("id", tr.dataset.id);
+    if (error) { inp.classList.add("bad"); lensStatus("bad", "That change didn't save. Check the internet connection and try again."); return; }
+    lensStatus("ok", "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+  });
+
+  // New rows go at the end of their own section
+  async function addSheetRow(section, addTr) {
+    let q = db.from(section.table).select("sort_order");
+    if (section.isContact !== undefined) q = q.eq("is_contact", section.isContact);
+    const { data: top } = await q.order("sort_order", { ascending: false }).limit(1);
+    const next = (top && top[0] ? top[0].sort_order : 0) + 1;
+    const rec = { sort_order: next, description: "" };
+    if (section.isContact !== undefined) rec.is_contact = section.isContact;
+    const { data, error } = await db.from(section.table).insert(rec).select().single();
+    if (error) { lensStatus("bad", "Couldn't add a row. Check the internet connection and try again."); return; }
+    $("lens-search").value = ""; $("lens-search").dispatchEvent(new Event("input"));
+    const tr = sheetRowEl(data, section);
+    lensBody.insertBefore(tr, addTr);
+    tr.querySelector("input").focus();
+    tr.scrollIntoView({ block: "nearest" });
+    lensStatus("ok", "Row added. Type the description.");
+  }
+
+  async function removeSheetRow(tr) {
+    const name = tr.querySelector("input").value.trim() || "this row";
+    if (!confirm("Remove " + name + "? This can't be undone.")) return;
+    const { error } = await db.from(tr.dataset.table).delete().eq("id", tr.dataset.id);
+    if (error) { lensStatus("bad", "Couldn't remove it. Check the internet connection and try again."); return; }
+    tr.remove();
+    lensStatus("ok", "Removed.");
+  }
 
   /* ---------- Recalls: who is due for a recall card between two dates ---------- */
   const recallFrom = $("recall-from"), recallTo = $("recall-to");
