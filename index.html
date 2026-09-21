@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spec Shoppe</title>
+<style>
+  :root {
+    --white: #ffffff;
+    --ink: #1b1b1b;
+    --muted: #5c5c5c;
+    --line: #d6d6d6;
+    --blue: #1d4f91;
+    --green: #2f6f3e;
+    --red: #8f2a22;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--white); }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12pt;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+
+  header.bar {
+    background: var(--red);
+    color: var(--white);
+    padding: 14px 24px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  header.bar h1 { margin: 0; font-size: 20pt; font-weight: bold; letter-spacing: 0.2px; }
+  header.bar .who { font-size: 11pt; opacity: 0.92; }
+
+  main { max-width: 760px; margin: 0 auto; padding: 32px 24px 64px; }
+  h2 { font-size: 16pt; margin: 0 0 6px; }
+  p.lead { margin: 0 0 24px; color: var(--muted); }
+
+  .hidden { display: none !important; }
+
+  /* Shared controls */
+  label { display: grid; gap: 6px; font-weight: bold; }
+  input[type=text], input[type=email], input[type=password], input[type=date], input[type=search], textarea {
+    font: inherit; padding: 10px 12px; border: 1px solid #8a8a8a; border-radius: 3px;
+    background: var(--white); color: var(--ink); width: 100%;
+  }
+  button { font: inherit; cursor: pointer; }
+  button.primary {
+    background: var(--blue); color: var(--white); border: 0; border-radius: 3px;
+    padding: 11px 18px; font-weight: bold;
+  }
+  button.primary:disabled { opacity: 0.6; cursor: default; }
+  button.secondary {
+    background: var(--white); color: var(--blue); border: 1px solid var(--blue);
+    border-radius: 3px; padding: 10px 16px; font-weight: bold;
+  }
+  button.secondary:disabled { opacity: 0.4; cursor: default; }
+  button.signout {
+    background: var(--white); color: var(--red); border: 1px solid var(--red);
+    border-radius: 3px; padding: 9px 16px; font-weight: bold;
+  }
+  button.signout:hover { background: #fbf3f2; }
+  .error { color: var(--red); font-weight: bold; min-height: 1.4em; margin: 0; }
+  .saved { color: var(--green); font-weight: bold; }
+  .rstatus { color: var(--muted); }
+  .rstatus.ok { color: var(--green); font-weight: bold; }
+  .rstatus.dirty { font-style: italic; }
+  .status { color: var(--muted); font-size: 11pt; margin: 0 0 18px; min-height: 1.4em; }
+  .status.ok { color: var(--green); }
+  .status.bad { color: var(--red); font-weight: bold; }
+  fieldset { border: 1px solid var(--line); border-left: 6px solid var(--blue); border-radius: 3px; margin: 0 0 18px; padding: 12px 16px 16px; }
+  fieldset.green { border-left-color: var(--green); }
+  fieldset.red { border-left-color: var(--red); }
+  legend { font-weight: bold; font-size: 13pt; padding: 0 6px; }
+
+  /* Login */
+  form.login { display: grid; gap: 16px; max-width: 420px; }
+  form.login button.primary { justify-self: start; }
+
+  /* Menu */
+  .menu { display: grid; gap: 14px; margin: 0 0 28px; }
+  .menu button {
+    text-align: left; background: var(--white); color: var(--ink);
+    border: 1px solid var(--line); border-left: 8px solid var(--blue);
+    border-radius: 3px; padding: 16px 18px;
+    display: grid; gap: 2px; width: 100%;
+  }
+  .menu button strong { font-size: 14pt; }
+  .menu button span { color: var(--muted); font-size: 11pt; }
+  .menu button.counts { border-left-color: var(--green); }
+  .menu button:hover { background: #f5f8fc; }
+  .menu button.counts:hover { background: #f4f9f5; }
+  .menu button.vendors { border-left-color: var(--red); }
+  .menu button.vendors:hover { background: #fbf3f2; }
+
+  /* Vendors */
+  .vhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .vhead .note { margin: 0; }
+  .vbtns2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .vgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+  .vgrid .wide { grid-column: 1 / -1; }
+  .vcsz { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.5fr) minmax(0, 0.9fr); gap: 16px; }
+  @media (max-width: 560px) { .vgrid { grid-template-columns: 1fr; } }
+
+  /* Find by check box */
+  .findhead { font-size: 13pt; margin: 0 0 8px; }
+  .finds { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin: 0 0 28px; }
+  .finds button {
+    text-align: left; background: var(--white); color: var(--ink); font-weight: bold;
+    border: 1px solid var(--line); border-left: 6px solid var(--green); border-radius: 3px; padding: 9px 12px;
+  }
+  .finds button.claim { border-left-color: var(--blue); }
+  .finds button:hover { background: #f4f9f5; }
+  .finds button.claim:hover { background: #f5f8fc; }
+
+  /* Search */
+  .searchrow { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; margin-bottom: 14px; }
+  #search-input { font-size: 14pt; padding: 12px 14px; }
+  .results { display: grid; gap: 8px; margin: 0 0 20px; }
+  .results button {
+    text-align: left; background: var(--white); color: var(--ink);
+    border: 1px solid var(--line); border-left: 6px solid var(--blue);
+    border-radius: 3px; padding: 10px 14px; display: grid; gap: 2px; width: 100%;
+  }
+  .results button:hover { background: #f5f8fc; }
+  .results button strong { font-size: 13pt; }
+  .results button span { color: var(--muted); font-size: 11pt; }
+  .note { color: var(--muted); margin: 0 0 14px; }
+
+  /* Placeholder panel */
+  .panel { border: 1px solid var(--line); border-left: 8px solid var(--green); border-radius: 3px; padding: 18px; }
+  button.back { margin-top: 20px; }
+
+  /* Patient + prescription screen: one screen, Arial 10 */
+  main.wide { max-width: none; padding: 10px 16px 20px; font-size: 10pt; line-height: 1.3; }
+  main.wide h2 { font-size: 13pt; margin: 0; }
+  main.wide label { gap: 3px; }
+  main.wide input[type=text], main.wide input[type=email], main.wide input[type=date], main.wide textarea {
+    padding: 4px 6px; font-size: 10pt;
+  }
+  main.wide button.primary { padding: 7px 14px; }
+  main.wide button.secondary { padding: 6px 12px; }
+  main.wide fieldset { padding: 4px 10px 8px; margin: 0; }
+  main.wide legend { font-size: 10pt; padding: 0 4px; }
+
+  .vtop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 8px; }
+  .vtop .vwho { flex: 1 1 220px; }
+  .vtop .vwho strong { font-size: 13pt; }
+  .vtop .vbtns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .pbox { margin-bottom: 8px !important; }
+  .pgrid { display: grid; grid-template-columns: 1.4fr 1fr 1.1fr; gap: 6px 18px; align-items: stretch; }
+  .prow { display: grid; gap: 6px; margin-bottom: 5px; }
+  .pc-id  { grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1fr); }
+  .pc-csz { grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.5fr) minmax(0, 0.9fr); }
+  .pc-3   { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pc-2   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pchecks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; margin-bottom: 6px; }
+  .check { display: flex; align-items: center; gap: 6px; font-weight: normal; }
+  .check input { width: 16px; height: 16px; accent-color: var(--blue); margin: 0; flex: none; }
+  input[readonly] { background: #f0f0f0; border-color: #b5b5b5; }
+  .lrow { display: grid; grid-template-columns: 136px minmax(0, 1fr); gap: 0; margin: 0 0 4px; font-weight: normal; }
+  main.wide .lrow { gap: 0; }
+  .tag { font-weight: bold; padding: 4px 6px; display: flex; align-items: center; white-space: nowrap; }
+  .tag.tb { background: #cfdcee; color: var(--blue); }
+  .tag.tg { background: #cfe6d4; color: var(--green); }
+  .cgroup { border-left: 5px solid var(--green); background: #f2f8f3; padding: 4px 8px 6px; margin-bottom: 6px; }
+  .cgroup.claim { border-left-color: var(--blue); background: #f1f5fb; margin-bottom: 0; }
+  .cgtitle { font-weight: bold; color: var(--green); margin: 0 0 3px; }
+  .cgroup.claim .cgtitle { color: var(--blue); }
+  .datefiled { max-width: 160px; margin-top: 2px; }
+
+  /* Patient box: all three columns line up top and bottom, with the extra space spread evenly */
+  .pcol { display: flex; flex-direction: column; justify-content: space-between; gap: 5px; }
+  .pcol .prow, .pcol .lrow { margin-bottom: 0; }
+  .pcol .cgroup { flex: 1 1 auto; margin: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; }
+  .pcol .cgroup .pchecks { flex: 1 1 auto; align-content: space-between; margin-bottom: 0; }
+  .pcol .cgroup .datefiled { margin-top: 0; }
+
+  .rxbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 14px; margin-bottom: 8px; }
+  .rxbar .vdate { width: 140px; }
+  .rxbar .vdoc { width: 180px; }
+  .workarea { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 8px; align-items: start; }
+  .visitbox { display: grid; gap: 6px; }
+  .visitmeta { display: grid; gap: 6px; }
+  .visitbtns { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  main.wide .visitbtns button { padding: 6px 4px; white-space: nowrap; }
+  .visitlist { display: grid; gap: 4px; align-content: start; max-height: 520px; overflow-y: auto; }
+  .visitlist button, .visitlist .vnew {
+    text-align: left; background: var(--white); color: var(--ink);
+    border: 1px solid var(--line); border-left: 5px solid var(--green);
+    border-radius: 3px; padding: 5px 8px; display: grid; gap: 1px; width: 100%; font-weight: bold;
+  }
+  .visitlist button:hover { background: #f4f9f5; }
+  .visitlist .sel { background: #e8f3ea; border-left-color: var(--red); }
+  .visitlist .vmeta { color: var(--muted); font-weight: normal; }
+  .visitlist .vnone { color: var(--muted); padding: 2px 2px; }
+
+  .vrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .rxgrid { display: grid; gap: 4px 4px; align-items: center; }
+  .rxh { font-weight: bold; text-align: center; color: var(--muted); }
+  .rxl { font-weight: bold; }
+  .rxgrid input { min-width: 0; text-align: center; }
+  .vdesc { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .drow { display: grid; grid-template-columns: 84px minmax(0, 1fr); font-weight: normal; }
+  main.wide .drow { gap: 0; }
+  .vprice { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .vprice input { text-align: right; }
+  .vprice input.total { font-weight: bold; }
+  textarea#v_notes { resize: vertical; min-height: 92px; }
+  [data-part="orders"] { margin-top: 8px; }
+  .ogrid { max-height: 132px; overflow: auto; scrollbar-gutter: stable; }
+  .ohead, .orow {
+    display: grid; grid-template-columns: 130px minmax(180px, 1fr) 100px 90px 100px 74px;
+    gap: 4px; align-items: center; margin-bottom: 4px;
+  }
+  .ohead { position: sticky; top: 0; background: var(--white); font-weight: bold; color: var(--muted); z-index: 1; }
+  .ohead .num, .orow input.num { text-align: right; }
+  .orow button.orm { padding: 3px 8px; font-size: 9pt; }
+  .onote { color: var(--red); font-weight: bold; margin: 4px 0 0; min-height: 1.2em; }
+  @media (max-width: 1000px) {
+    .pgrid { grid-template-columns: 1fr; }
+    main.wide .vrow { grid-template-columns: 1fr; }
+    .vprice { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .workarea { grid-template-columns: 1fr; }
+    .visitlist { max-height: 180px; }
+  }
+
+  /* Rounded corners and soft shadows (option A: subtle) */
+  :root { --r: 6px; --ri: 3px; --shadow: 0 1px 3px rgba(0, 0, 0, 0.14); --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.18); }
+  header.bar { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28); }
+  .menu button, .finds button, .results button, .visitlist button, .visitlist .vnew, .panel { border-radius: var(--r); box-shadow: var(--shadow); }
+  fieldset { border-radius: var(--r); box-shadow: var(--shadow); }
+  .cgroup { border-radius: var(--r); }
+  button.primary, button.secondary, button.signout { border-radius: 4px; box-shadow: var(--shadow-btn); }
+  button.primary:active:not(:disabled), button.secondary:active:not(:disabled), button.signout:active { box-shadow: none; transform: translateY(1px); }
+  input[type=text], input[type=email], input[type=password], input[type=date], input[type=search], textarea {
+    border-radius: var(--ri); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+  }
+  .lrow .tag, .drow .tag { border-radius: var(--ri) 0 0 var(--ri); }
+  .lrow input, .drow input { border-radius: 0 var(--ri) var(--ri) 0; }
+
+  /* Printed record: fits the top half of a letter sheet, so the sheet can be folded in half */
+  #print-sheet { display: none; }
+  @media print {
+    @page { size: letter; margin: 0.25in 0.3in; }
+    body > *:not(#print-sheet) { display: none !important; }
+    #print-sheet { display: block; font: 9pt/1.25 Arial, Helvetica, sans-serif; color: #000; }
+    #print-sheet, #print-sheet * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #print-sheet .half { height: 5in; overflow: hidden; }
+    #print-sheet .hdr { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1.5pt solid #8f2a22; padding-bottom: 2pt; }
+    #print-sheet .shop { font-size: 15pt; font-weight: bold; color: #8f2a22; }
+    #print-sheet .pat { display: flex; justify-content: space-between; margin: 5pt 0 4pt; }
+    #print-sheet .pat .name { font-size: 12pt; font-weight: bold; }
+    #print-sheet .k { color: #555; }
+    #print-sheet table { border-collapse: collapse; width: 100%; }
+    #print-sheet th, #print-sheet td { border: 0.6pt solid #888; padding: 2pt 3pt; text-align: center; font-size: 9pt; }
+    #print-sheet th { background: #eee; font-weight: bold; }
+    #print-sheet td.l, #print-sheet th.l { text-align: left; }
+    #print-sheet td.r { text-align: right; }
+    #print-sheet td.lab { font-weight: bold; width: 34pt; }
+    #print-sheet td.plab { background: #eee; font-weight: bold; width: 46pt; }
+    #print-sheet .row { display: flex; gap: 8pt; margin-top: 5pt; }
+    #print-sheet .h { font-weight: bold; font-size: 9pt; margin: 0 0 2pt; }
+    #print-sheet .notes { border: 0.6pt solid #888; height: 46pt; padding: 2pt 3pt; overflow: hidden; white-space: pre-wrap; }
+    #print-sheet .det span { margin-right: 10pt; }
+    #print-sheet .slip { font-size: 10pt; position: relative; }
+    #print-sheet .slip .ssig { position: absolute; left: 0; bottom: 0.2in; width: 3.4in; }
+    #print-sheet .slip .sline { border-top: 0.8pt solid #000; height: 0; }
+    #print-sheet .slip .scap { font-size: 9pt; color: #555; margin-top: 2pt; }
+    #print-sheet .slip .shead { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1.5pt solid #8f2a22; padding-bottom: 3pt; }
+    #print-sheet .slip .sshop { font-size: 18pt; font-weight: bold; color: #8f2a22; }
+    #print-sheet .slip .saddr { text-align: right; font-size: 9pt; color: #333; line-height: 1.3; }
+    #print-sheet .slip .stitle { font-size: 11pt; font-weight: bold; letter-spacing: 0.5pt; margin: 10pt 0 6pt; }
+    #print-sheet .slip .spat { display: flex; justify-content: space-between; margin-bottom: 10pt; }
+    #print-sheet .slip .sname { font-size: 13pt; font-weight: bold; }
+    #print-sheet .slip .sh { font-weight: bold; margin: 8pt 0 3pt; }
+    #print-sheet .slip th, #print-sheet .slip td { font-size: 10pt; padding: 3pt 4pt; }
+    #print-sheet .slip td.lab { width: 40pt; }
+  }
+
+  :focus-visible { outline: 3px solid #f0a500; outline-offset: 2px; }
+  @media (max-width: 560px) { .searchrow { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <h1>Spec Shoppe</h1>
+  <span class="who" id="who"></span>
+</header>
+
+<main id="main">
+
+  <!-- Sign in -->
+  <section id="view-login" class="hidden">
+    <h2>Sign in</h2>
+    <p class="lead">Use the office email and password.</p>
+    <form class="login" id="login-form">
+      <label>Email
+        <input type="email" id="email" autocomplete="username" required>
+      </label>
+      <label>Password
+        <input type="password" id="password" autocomplete="current-password" required>
+      </label>
+      <p class="error" id="login-error" role="alert"></p>
+      <button class="primary" id="login-btn" type="submit">Sign in</button>
+    </form>
+  </section>
+
+  <!-- Main menu -->
+  <section id="view-menu" class="hidden">
+    <h2>Main menu</h2>
+    <p class="status" id="status">Checking the database...</p>
+    <div class="menu">
+      <button type="button" data-go="patients">
+        <strong>Find or add a patient</strong>
+        <span>Search by name or birthday, or start a new record.</span>
+      </button>
+      <button type="button" class="counts" data-go="counts">
+        <strong>Daily counts</strong>
+        <span>Pick a date and see that day's total.</span>
+      </button>
+      <button type="button" class="vendors" data-go="vendors">
+        <strong>Vendors</strong>
+        <span>Search your vendor list, or add and edit a vendor.</span>
+      </button>
+    </div>
+    <h3 class="findhead">Find by check box</h3>
+    <div class="finds" id="find-buttons"></div>
+
+    <button type="button" class="signout" id="signout-btn">Sign out</button>
+  </section>
+
+  <!-- Find a patient -->
+  <section id="view-patients" class="hidden">
+    <h2>Find or add a patient</h2>
+    <div class="searchrow">
+      <label>Last name, first name, or birthday
+        <input type="search" id="search-input" autocomplete="off">
+      </label>
+      <button type="button" class="primary" id="new-patient-btn">Add new patient</button>
+    </div>
+    <p class="note" id="search-note">Type part of a name, or a birthday as six digits like 01/02/65. Matches appear as you type.</p>
+    <div class="results" id="results"></div>
+    <button type="button" class="secondary" data-go="menu">Back to main menu</button>
+  </section>
+
+  <!-- Patient and prescription, one screen -->
+  <section id="view-record" class="hidden">
+    <form id="record-form" novalidate>
+
+      <div class="vtop">
+        <div class="vwho"><strong id="r-title">New patient</strong></div>
+        <div class="vbtns">
+          <button type="button" class="secondary" id="r-back-btn">Back to search</button>
+          <span class="rstatus" id="r-status" role="status"></span>
+          <span class="error" id="r-error" role="alert"></span>
+        </div>
+      </div>
+
+      <fieldset class="pbox" data-part="patient">
+        <legend>Patient</legend>
+        <div class="pgrid">
+
+          <div class="pcol">
+            <div class="prow pc-id">
+              <label>ID <input type="text" id="f_patient_id" readonly tabindex="-1"></label>
+              <label>Last name <input type="text" id="f_last_name" autocomplete="off"></label>
+              <label>First name <input type="text" id="f_first_name" autocomplete="off"></label>
+            </div>
+            <div class="prow">
+              <label>Address <input type="text" id="f_address" autocomplete="off"></label>
+            </div>
+            <div class="prow pc-csz">
+              <label>City <input type="text" id="f_city" autocomplete="off"></label>
+              <label>State <input type="text" id="f_state" autocomplete="off"></label>
+              <label>Zip <input type="text" id="f_zip_code" autocomplete="off"></label>
+            </div>
+            <div class="prow pc-3">
+              <label>Home phone <input type="text" id="f_home_phone" class="phoneinput" inputmode="tel" maxlength="24" placeholder="(555) 123-4567" autocomplete="off"></label>
+              <label>Work phone <input type="text" id="f_work_phone" class="phoneinput" inputmode="tel" maxlength="24" placeholder="(555) 123-4567" autocomplete="off"></label>
+              <label>Cell phone <input type="text" id="f_cell_phone" class="phoneinput" inputmode="tel" maxlength="24" placeholder="(555) 123-4567" autocomplete="off"></label>
+            </div>
+            <div class="prow">
+              <label>Email <input type="email" id="f_email" autocomplete="off"></label>
+            </div>
+          </div>
+
+          <div class="pcol">
+            <div class="cgroup ins">
+            <label class="lrow"><span class="tag tg">Birthday</span><input type="text" id="f_birthday" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off" data-kind="birth"></label>
+            <label class="lrow"><span class="tag tg">Medical number</span><input type="text" id="f_medical_no" autocomplete="off"></label>
+            <label class="lrow"><span class="tag tg">VSP number</span><input type="text" id="f_vsp_number" autocomplete="off"></label>
+            <label class="lrow"><span class="tag tg">EyeMed number</span><input type="text" id="f_ecpa_number" autocomplete="off"></label>
+            <label class="lrow"><span class="tag tg">BCBS number</span><input type="text" id="f_bcbs_number" autocomplete="off"></label>
+            <label class="lrow"><span class="tag tg">Occupation</span><input type="text" id="f_occupation" autocomplete="off"></label>
+            <label class="lrow"><span class="tag tg">Employer</span><input type="text" id="f_employer" autocomplete="off"></label>
+            <label class="lrow"><span class="tag tg">Insurance holder</span><input type="text" id="f_insurance_holder" autocomplete="off"></label>
+            </div>
+          </div>
+
+          <div class="pcol">
+            <div class="cgroup ins">
+              <div class="cgtitle">Insurance</div>
+              <div class="pchecks">
+                <label class="check"><input type="checkbox" id="f_ck_vsp">VSP</label>
+                <label class="check"><input type="checkbox" id="f_ck_eye_med">Eye Med</label>
+                <label class="check"><input type="checkbox" id="f_ck_xix">Medicaid</label>
+                <label class="check"><input type="checkbox" id="f_ck_home_state_health">Home State Health</label>
+                <label class="check"><input type="checkbox" id="f_ck_abbey_convent">Bill Abbey/Convent</label>
+                <label class="check"><input type="checkbox" id="f_ck_lions">Bill Lions Club</label>
+                <label class="check"><input type="checkbox" id="f_ck_other_ins">Bill Other Ins</label>
+              </div>
+            </div>
+            <div class="cgroup claim">
+              <div class="cgtitle">Claim</div>
+              <div class="pchecks">
+                <label class="check"><input type="checkbox" id="f_ck_pt_took_frames">Pt Took Frame</label>
+                <label class="check"><input type="checkbox" id="f_ck_payments">Payments</label>
+                <label class="check"><input type="checkbox" id="f_ck_filed">Filed</label>
+              </div>
+              <label class="datefiled">Date filed <input type="text" id="f_date_filed" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+            </div>
+          </div>
+
+        </div>
+      </fieldset>
+
+      <div class="workarea">
+      <aside class="visitcol">
+        <fieldset class="green">
+          <legend>Visits</legend>
+          <div class="visitbox">
+            <div data-part="rx" class="visitmeta">
+              <label>Visit date <input type="text" id="v_service_date" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+              <label>Doctor <input type="text" id="v_doctor" autocomplete="off"></label>
+            </div>
+            <div class="visitbtns">
+              <button type="button" class="primary" id="rx-new">New visit</button>
+              <button type="button" class="secondary" id="print-btn">Print record</button>
+              <button type="button" class="secondary" id="print-rx-btn">Print Rx</button>
+            </div>
+            <div class="visitlist" id="visit-list"></div>
+          </div>
+        </fieldset>
+      </aside>
+      <div class="workmain">
+
+      <div data-part="rx">
+        <div class="vrow">
+          <fieldset>
+            <legend>Glasses Rx</legend>
+            <div class="rxgrid" id="glasses-grid"></div>
+          </fieldset>
+          <fieldset class="green">
+            <legend>Contacts Rx</legend>
+            <div class="rxgrid" id="contacts-grid"></div>
+          </fieldset>
+        </div>
+
+        <div class="vrow">
+          <fieldset>
+            <legend>Lens, misc, and frame details</legend>
+            <div class="vdesc">
+              <label class="drow"><span class="tag tb">Lens type</span><input type="text" id="v_lens_type" autocomplete="off"></label>
+              <label class="drow"><span class="tag tb">Misc</span><input type="text" id="v_misc" autocomplete="off"></label>
+              <label class="drow"><span class="tag tb">Frame</span><input type="text" id="v_frame" autocomplete="off"></label>
+            </div>
+          </fieldset>
+          <fieldset class="green">
+            <legend>Notes</legend>
+            <textarea id="v_notes" rows="4"></textarea>
+          </fieldset>
+        </div>
+
+        <fieldset class="red">
+          <legend>Pricing</legend>
+          <div class="vprice">
+            <label>Lens <input type="text" id="v_lens_chg" inputmode="decimal" autocomplete="off"></label>
+            <label>Misc <input type="text" id="v_misc_chg" inputmode="decimal" autocomplete="off"></label>
+            <label>Frame <input type="text" id="v_frame_chg" inputmode="decimal" autocomplete="off"></label>
+            <label>Contacts <input type="text" id="v_contacts_chg" inputmode="decimal" autocomplete="off"></label>
+            <label>Exam <input type="text" id="v_exam" inputmode="decimal" autocomplete="off"></label>
+            <label>Discount <input type="text" id="v_discount" inputmode="decimal" autocomplete="off"></label>
+            <label>Tax <input type="text" id="v_tax" readonly tabindex="-1"></label>
+            <label>Total <input type="text" id="v_total" class="total" readonly tabindex="-1"></label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div data-part="orders">
+        <fieldset class="green">
+          <legend>Orders</legend>
+          <div class="ogrid" id="orders-grid">
+            <div class="ohead">
+              <span>Order date</span><span>Item</span><span class="num">Price</span><span class="num">Tax</span><span class="num">Total</span><span></span>
+            </div>
+          </div>
+          <p class="onote" id="o-note" role="alert"></p>
+        </fieldset>
+      </div>
+
+      </div>
+      </div>
+
+    </form>
+  </section>
+
+  <!-- Placeholder -->
+  <!-- Vendors: list and search -->
+  <section id="view-vendors" class="hidden">
+    <h2>Vendors</h2>
+    <div class="searchrow">
+      <label>Company name, sales rep, or notes
+        <input type="search" id="vendor-search" autocomplete="off">
+      </label>
+      <button type="button" class="primary" id="new-vendor-btn">Add new vendor</button>
+    </div>
+    <p class="note" id="vendor-note"></p>
+    <div class="results" id="vendor-results"></div>
+    <p><button type="button" class="secondary hidden" id="vendor-more">Show more</button></p>
+    <button type="button" class="secondary" data-go="menu">Back to main menu</button>
+  </section>
+
+  <!-- Vendors: one vendor -->
+  <section id="view-vendor" class="hidden">
+    <div class="vhead">
+      <div><h2 id="vendor-title">New vendor</h2><span class="note" id="vendor-access"></span></div>
+      <div class="vbtns2">
+        <button type="button" class="secondary" id="vendor-back">Back to vendors</button>
+        <button type="button" class="signout hidden" id="vendor-remove">Remove vendor</button>
+        <span class="rstatus" id="vendor-status" role="status"></span>
+        <span class="error" id="vendor-error" role="alert"></span>
+      </div>
+    </div>
+    <form id="vendor-form" novalidate>
+      <fieldset class="red">
+        <legend>Vendor</legend>
+        <div class="vgrid">
+          <label class="wide">Company name <input type="text" id="vd_company_name" autocomplete="off"></label>
+          <label class="wide">Address <input type="text" id="vd_address" autocomplete="off"></label>
+          <div class="vcsz wide">
+            <label>City <input type="text" id="vd_city" autocomplete="off"></label>
+            <label>State <input type="text" id="vd_state" autocomplete="off"></label>
+            <label>Zip code <input type="text" id="vd_zip_code" autocomplete="off"></label>
+          </div>
+          <label>Phone <input type="text" id="vd_phone" autocomplete="off"></label>
+          <label>Fax <input type="text" id="vd_fax" autocomplete="off"></label>
+          <label>Account number <input type="text" id="vd_account_number" autocomplete="off"></label>
+          <label>Sales rep <input type="text" id="vd_sales_rep" autocomplete="off"></label>
+          <label class="wide">Notes <textarea id="vd_notes" rows="6"></textarea></label>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+
+  <!-- Patients with a check box marked -->
+  <section id="view-checked" class="hidden">
+    <h2 id="checked-title">Patients</h2>
+    <p class="note" id="checked-note"></p>
+    <div class="results" id="checked-results"></div>
+    <p><button type="button" class="secondary hidden" id="checked-more">Show more</button></p>
+    <button type="button" class="secondary" data-go="menu">Back to main menu</button>
+  </section>
+
+  <section id="view-counts" class="hidden">
+    <div class="panel">
+      <h2>Daily counts</h2>
+      <p>This screen isn't built yet. It comes after the note bar and the Print popup.</p>
+    </div>
+    <button type="button" class="secondary back" data-go="menu">Back to main menu</button>
+  </section>
+
+</main>
+
+<div id="print-sheet"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://swyxttdbtzmqdlcothbs.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_e8JCEYPrhhMdIAkmuU6dFA_JM19OPSt";
+  const TAX_RATE_PERCENT = 9.1;   // sales tax rate: change it here if it ever changes
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  /* ---------- Screens ---------- */
+  const views = ["login", "menu", "patients", "checked", "vendors", "vendor", "record", "counts"];
+  function show(name) {
+    views.forEach(v => document.getElementById("view-" + v).classList.toggle("hidden", v !== name));
+    document.getElementById("main").classList.toggle("wide", name === "record");
+    window.scrollTo(0, 0);
+  }
+  const $ = (id) => document.getElementById(id);
+
+  // Dates show as MM/DD/YY. The database keeps the full four-digit year.
+  const DATE_MSG = "Enter dates as six digits, like 01/02/65.";
+  function fmtDate(iso) {
+    if (!iso) return "";
+    const [y, m, d] = iso.split("-");
+    return m + "/" + d + "/" + y.slice(2);
+  }
+  function setDate(el, iso) { el.value = fmtDate(iso); el.dataset.iso = iso || ""; }
+  // Returns "2026-09-20" style text, "" when the box is empty, or null when it isn't a real date.
+  function readDate(el) {
+    const t = el.value.trim();
+    if (t === "") return "";
+    if (el.dataset.iso && t === fmtDate(el.dataset.iso)) return el.dataset.iso;   // untouched: keep the saved year exactly
+    const m = /^(\d\d)\/(\d\d)\/(\d\d)$/.exec(t);
+    if (!m) return null;
+    const mm = +m[1], dd = +m[2], yy = +m[3];
+    const now = new Date();
+    let year = 2000 + yy;
+    if (el.dataset.kind === "birth") {
+      if (new Date(year, mm - 1, dd) > now) year -= 100;         // a birthday can't be in the future
+    } else if (year > now.getFullYear() + 20) {
+      year -= 100;                                                // other dates: 20 years ahead at most
+    }
+    const dt = new Date(year, mm - 1, dd);
+    if (dt.getFullYear() !== year || dt.getMonth() !== mm - 1 || dt.getDate() !== dd) return null;
+    return year + "-" + String(mm).padStart(2, "0") + "-" + String(dd).padStart(2, "0");
+  }
+  // As you type, keep only digits (six at most) and add the slashes.
+  document.addEventListener("input", (e) => {
+    const el = e.target;
+    if (!el.classList || !el.classList.contains("dateinput")) return;
+    const d = el.value.replace(/\D/g, "").slice(0, 6);
+    const f = d.length <= 2 ? d : d.length <= 4 ? d.slice(0, 2) + "/" + d.slice(2) : d.slice(0, 2) + "/" + d.slice(2, 4) + "/" + d.slice(4);
+    if (el.value !== f) el.value = f;
+  }, true);
+  function todayISO() {
+    return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  }
+
+  // Phone boxes: type the digits and it shapes them as (555) 123-4567. Old numbers stay as they were until you edit them.
+  // If you type a letter (like "x5" for an extension) the box stops reshaping and leaves your text alone.
+  document.addEventListener("input", (e) => {
+    const el = e.target;
+    if (!el.classList || !el.classList.contains("phoneinput")) return;
+    if (/[A-Za-z]/.test(el.value)) return;
+    const d = el.value.replace(/\D/g, "").slice(0, 10);
+    const f = d.length === 0 ? "" : d.length <= 3 ? "(" + d
+            : d.length <= 6 ? "(" + d.slice(0, 3) + ") " + d.slice(3)
+            : "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6);
+    if (el.value !== f) el.value = f;
+  }, true);
+
+  /* ---------- Patient fields ---------- */
+  const P_TEXT = ["last_name", "first_name", "address", "city", "state", "zip_code",
+    "home_phone", "work_phone", "cell_phone", "email", "medical_no", "occupation", "employer",
+    "insurance_holder", "vsp_number", "ecpa_number", "bcbs_number"];
+  const P_DATES = ["birthday", "date_filed"];
+  const P_BOOLS = ["ck_vsp", "ck_eye_med", "ck_xix", "ck_home_state_health", "ck_abbey_convent",
+    "ck_lions", "ck_other_ins", "ck_pt_took_frames", "ck_payments", "ck_filed"];
+  const pin = {};   // patient field name -> input element
+  P_TEXT.concat(P_DATES, P_BOOLS).forEach(n => { pin[n] = $("f_" + n); });
+
+  /* ---------- Prescription fields ---------- */
+  const vin = {};   // prescription field name -> input element
+
+  const GLASSES_HEAD = ["SPH", "CYL", "AXIS", "ADD", "Prism", "Base", "HGHT", "PD"];
+  const GLASSES_ROWS = [
+    ["Right", ["rsph", "rcyl", "raxis", "radd", "od_prism", "od_base", "rhght", "rpd"]],
+    ["Left",  ["lsph", "lcyl", "laxis", "ladd", "os_prism", "os_base", "lhght", "lpd"]]
+  ];
+  const CONTACT_HEAD = ["Brand", "QTY", "BC", "SPR", "CYL", "AXIS"];
+  const CONTACT_ROWS = [
+    ["Right", ["odcl_brand", "odcl_qty", "odcl_bc", "odcl_spr", "odcl_cyl", "odcl_axis"]],
+    ["Left",  ["oscl_brand", "oscl_qty", "oscl_bc", "oscl_spr", "oscl_cyl", "oscl_axis"]]
+  ];
+
+  function buildRx(hostId, head, rows, template) {
+    const host = $(hostId);
+    host.style.gridTemplateColumns = template;
+    host.appendChild(document.createElement("div"));
+    head.forEach(h => { const d = document.createElement("div"); d.className = "rxh"; d.textContent = h; host.appendChild(d); });
+    rows.forEach(([label, names]) => {
+      const l = document.createElement("div");
+      l.className = "rxl"; l.textContent = label;
+      host.appendChild(l);
+      names.forEach((n, i) => {
+        const inp = document.createElement("input");
+        inp.type = "text"; inp.id = "v_" + n; inp.autocomplete = "off";
+        inp.setAttribute("aria-label", label + " eye " + head[i]);
+        vin[n] = inp;
+        host.appendChild(inp);
+      });
+    });
+  }
+  buildRx("glasses-grid", GLASSES_HEAD, GLASSES_ROWS, "42px repeat(4, minmax(0, 1fr)) repeat(2, minmax(0, 1.1fr)) repeat(2, minmax(0, 1fr))");
+  buildRx("contacts-grid", CONTACT_HEAD, CONTACT_ROWS, "42px minmax(0, 2.6fr) repeat(5, minmax(0, 1fr))");
+
+  const V_PLAIN = ["service_date", "doctor", "frame", "misc", "lens_type", "notes"];
+  const V_RX = [].concat(GLASSES_ROWS[0][1], GLASSES_ROWS[1][1], CONTACT_ROWS[0][1], CONTACT_ROWS[1][1]);
+  const V_CHARGES = ["frame_chg", "misc_chg", "lens_chg", "contacts_chg", "exam", "discount"];
+  const V_TAXABLE = ["frame_chg", "misc_chg", "lens_chg", "contacts_chg"];   // exam is not taxed
+  const V_CALC = ["tax", "total"];
+  V_PLAIN.concat(V_CHARGES, V_CALC).forEach(n => { vin[n] = $("v_" + n); });
+
+  function toCents(str) {
+    const s = String(str).replace(/[$,\s]/g, "");
+    if (s === "") return 0;
+    const n = Number(s);
+    return Number.isFinite(n) ? Math.round(n * 100) : NaN;
+  }
+
+  // Tax = 9.1% of Frame + Misc + Lens + Contacts (before the discount). Exam is not taxed.
+  // Total = all charges + exam - discount + tax.
+  function recalc() {
+    const taxable = V_TAXABLE.map(k => toCents(vin[k].value));
+    const exam = toCents(vin.exam.value);
+    const disc = toCents(vin.discount.value);
+    if (taxable.concat([exam, disc]).some(Number.isNaN)) {
+      vin.tax.value = ""; vin.total.value = "";
+      return;
+    }
+    const base = taxable.reduce((a, b) => a + b, 0);
+    const tax = Math.round((base * TAX_RATE_PERCENT * 10) / 1000 + 1e-9);   // cents
+    const total = base + exam - disc + tax;
+    vin.tax.value = (tax / 100).toFixed(2);
+    vin.total.value = (total / 100).toFixed(2);
+  }
+  // tidy a price to two decimals when you leave the box
+  V_CHARGES.forEach(n => vin[n].addEventListener("blur", () => {
+    const c = toCents(vin[n].value);
+    if (vin[n].value.trim() !== "" && !Number.isNaN(c)) vin[n].value = (c / 100).toFixed(2);
+  }));
+
+  /* ---------- The record on screen ---------- */
+  let patientId = null;     // null = new patient, not saved yet
+  let patientRec = null;
+  let rxRows = [];          // this patient's saved prescriptions, newest first
+  let rxIndex = -1;         // position in rxRows, or -1 for a new, unsaved Rx
+  let pDirty = false;       // patient info changed since last save
+  let rDirty = false;       // prescription changed since last save
+  let oDirty = false;       // order lines changed since last save
+
+  const rform = $("record-form");
+
+  function clearMessages() {
+    clearTimeout(autoTimer);
+    $("r-status").textContent = "";
+    $("r-status").className = "rstatus";
+    $("r-error").textContent = "";
+  }
+  function anyDirty() { return pDirty || rDirty || oDirty; }
+
+  rform.addEventListener("input", (e) => {
+    const part = e.target.closest("[data-part]");
+    if (!part) return;
+    const kind = part.dataset.part;
+    if (kind === "patient") pDirty = true;
+    else if (kind === "orders") onOrderInput(e);
+    else {
+      rDirty = true;
+      if (V_CHARGES.includes(e.target.id.replace("v_", ""))) recalc();
+    }
+    markChanged();
+  });
+
+  function fillPatient(rec) {
+    P_TEXT.forEach(k => { pin[k].value = (rec && rec[k]) || ""; });
+    P_DATES.forEach(k => { setDate(pin[k], rec && rec[k]); });
+    P_BOOLS.forEach(k => { pin[k].checked = !!(rec && rec[k]); });
+    $("f_patient_id").value = rec ? rec.patient_id : "";
+    $("r-title").textContent = titleFor(rec);
+    pDirty = false;
+  }
+  function titleFor(rec) {
+    if (!rec) return "New patient";
+    return [rec.first_name, rec.last_name].filter(Boolean).join(" ") || "Patient";
+  }
+
+  function fillRx(rec) {
+    V_PLAIN.forEach(k => { if (k !== "service_date") vin[k].value = (rec && rec[k]) || ""; });
+    setDate(vin.service_date, rec ? rec.service_date : todayISO());
+    V_RX.forEach(k => { vin[k].value = (rec && rec[k]) || ""; });
+    V_CHARGES.concat(V_CALC).forEach(k => {
+      vin[k].value = (rec && rec[k] !== null && rec[k] !== undefined) ? Number(rec[k]).toFixed(2) : "";
+    });
+    if (!rec) recalc();
+  }
+
+  function fmtMoney(n) {
+    return (n === null || n === undefined || n === "") ? "" : "$" + Number(n).toFixed(2);
+  }
+
+  // The visits list on the left, newest first. The open visit is highlighted.
+  function renderVisitList() {
+    const list = $("visit-list");
+    list.innerHTML = "";
+    if (rxIndex < 0) {
+      const d = document.createElement("div");
+      d.className = "vnew sel";
+      d.textContent = "New visit (not saved yet)";
+      list.appendChild(d);
+    }
+    rxRows.forEach((r, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.tabIndex = -1;
+      if (i === rxIndex) b.className = "sel";
+      const top = document.createElement("span");
+      top.textContent = fmtDate(r.service_date) || "No date";
+      const meta = document.createElement("span");
+      meta.className = "vmeta";
+      meta.textContent = [r.doctor, Number(r.total) ? fmtMoney(r.total) : ""].filter(Boolean).join("  |  ");   // no total shown for a $0.00 visit
+      b.appendChild(top); b.appendChild(meta);
+      b.addEventListener("click", () => selectVisit(i));
+      list.appendChild(b);
+    });
+    if (!rxRows.length && rxIndex >= 0) {
+      const n = document.createElement("div");
+      n.className = "vnone"; n.textContent = "No visits yet.";
+      list.appendChild(n);
+    }
+  }
+
+  function showRx() {
+    fillRx(rxIndex >= 0 ? rxRows[rxIndex] : null);
+    rDirty = false;
+    renderVisitList();
+    loadOrders();
+  }
+
+  async function loadRxRows() {
+    if (patientId === null) { rxRows = []; return null; }
+    const { data, error } = await db.from("prescriptions").select("*").eq("patient_id", patientId)
+      .order("service_date", { ascending: false }).order("prescription_id", { ascending: false });
+    if (error) return error;
+    rxRows = data;
+    return null;
+  }
+
+  /* ---------- Order lines (the note bar) ---------- */
+  const ordersGrid = $("orders-grid");
+  let orderRows = [];   // { id, dirty, wrap, date, note, price, tax, total }
+  let ordersSeq = 0;
+  const ORDER_TAB_BASE = 200;   // order lines come after every other box
+  let orderTab = 0;
+
+  function mkInput(type, aria, cls) {
+    const i = document.createElement("input");
+    i.type = type; i.autocomplete = "off";
+    i.setAttribute("aria-label", aria);
+    if (cls) i.className = cls;
+    return i;
+  }
+
+  function addOrderRow(rec) {
+    const wrap = document.createElement("div");
+    wrap.className = "orow";
+    const row = {
+      id: rec ? rec.order_id : null, dirty: false, wrap,
+      date: mkInput("text", "Order date", "dateinput"),
+      note: mkInput("text", "Item"),
+      price: mkInput("text", "Price", "num oprice"),
+      tax: mkInput("text", "Tax", "num"),
+      total: mkInput("text", "Total", "num")
+    };
+    row.price.inputMode = "decimal";
+    row.date.inputMode = "numeric"; row.date.maxLength = 8; row.date.placeholder = "MM/DD/YY";
+    [row.date, row.note, row.price].forEach(el => { el.tabIndex = ORDER_TAB_BASE + orderTab++; });
+    row.tax.readOnly = true; row.tax.tabIndex = -1;
+    row.total.readOnly = true; row.total.tabIndex = -1;
+    if (rec) {
+      setDate(row.date, rec.nb_date);
+      row.note.value = rec.nb_note || "";
+      row.price.value = moneyText(rec.nb_price);
+      row.tax.value = moneyText(rec.tax);
+      row.total.value = moneyText(rec.total);
+    }
+    const rm = document.createElement("button");
+    rm.type = "button"; rm.className = "secondary orm"; rm.textContent = "Remove";
+    rm.addEventListener("click", () => removeOrderRow(row));
+    [row.date, row.note, row.price, row.tax, row.total, rm].forEach(el => wrap.appendChild(el));
+    wrap._row = row;
+    orderRows.push(row);
+    ordersGrid.appendChild(wrap);
+    return row;
+  }
+  function moneyText(n) { return (n === null || n === undefined) ? "" : Number(n).toFixed(2); }
+  function rowHasContent(r) { return !!(r.date.value || r.note.value.trim() || r.price.value.trim()); }
+  function ensureBlankRow() {
+    const last = orderRows[orderRows.length - 1];
+    if (!last || rowHasContent(last)) addOrderRow(null);
+  }
+  function clearOrderRows() {
+    orderRows.forEach(r => r.wrap.remove());
+    orderRows = [];
+    orderTab = 0;
+  }
+
+  // Each line: tax = 9.1% of the price, total = price + tax.
+  function calcRow(row) {
+    const c = toCents(row.price.value);
+    if (row.price.value.trim() === "" || Number.isNaN(c)) { row.tax.value = ""; row.total.value = ""; return; }
+    const tax = Math.round((c * TAX_RATE_PERCENT * 10) / 1000 + 1e-9);
+    row.tax.value = (tax / 100).toFixed(2);
+    row.total.value = ((c + tax) / 100).toFixed(2);
+  }
+
+  function onOrderInput(e) {
+    const wrap = e.target.closest(".orow");
+    if (!wrap) return;
+    const row = wrap._row;
+    if (!row.date.value && e.target !== row.date) setDate(row.date, todayISO());   // new line starts dated today
+    row.dirty = true;
+    oDirty = true;
+    if (e.target === row.price) calcRow(row);
+    ensureBlankRow();
+  }
+  ordersGrid.addEventListener("focusout", (e) => {
+    if (!e.target.classList || !e.target.classList.contains("oprice")) return;
+    const c = toCents(e.target.value);
+    if (e.target.value.trim() !== "" && !Number.isNaN(c)) e.target.value = (c / 100).toFixed(2);
+  });
+
+  async function removeOrderRow(row) {
+    if (row.id !== null) {
+      if (!confirm("Remove this order line? This can't be undone.")) return;
+      const { error } = await db.from("orders").delete().eq("order_id", row.id);
+      if (error) {
+        $("r-error").textContent = "Couldn't remove that line. Check the internet connection and try again.";
+        return;
+      }
+    }
+    row.wrap.remove();
+    orderRows = orderRows.filter(r => r !== row);
+    ensureBlankRow();
+    oDirty = orderRows.some(r => r.dirty && rowHasContent(r));
+  }
+
+  async function loadOrders() {
+    const mine = ++ordersSeq;
+    clearOrderRows();
+    oDirty = false;
+    $("o-note").textContent = "";
+    if (rxIndex >= 0) {
+      const { data, error } = await db.from("orders").select("*")
+        .eq("prescription_id", rxRows[rxIndex].prescription_id)
+        .order("order_id", { ascending: true });
+      if (mine !== ordersSeq) return;   // a newer load is already running
+      if (error) {
+        $("o-note").textContent = "Couldn't load the order lines. Check the internet connection and try again.";
+      } else {
+        data.forEach(addOrderRow);
+      }
+    }
+    ensureBlankRow();
+  }
+
+  /* ---------- Moving between visits (saves first) ---------- */
+  async function selectVisit(i) {
+    if (i === rxIndex) return;
+    if (!(await ensureSaved())) return;
+    clearMessages();
+    rxIndex = i;
+    showRx();
+  }
+  $("rx-new").addEventListener("click", async () => {
+    if (!(await ensureSaved())) return;
+    clearMessages();
+    rxIndex = -1;
+    showRx();
+    vin.doctor.focus();
+  });
+
+  function openNewRecord(prefillLast) {
+    patientId = null; patientRec = null; rxRows = []; rxIndex = -1;
+    fillPatient(null);
+    if (prefillLast) pin.last_name.value = prefillLast;   // saved only once something else is typed
+    showRx();
+    clearMessages();
+    cameFrom = "search";
+    $("r-back-btn").textContent = "Back to search";
+    show("record");
+    pin.last_name.focus();
+  }
+
+  async function openRecord(id) {
+    const { data, error } = await db.from("patients").select("*").eq("patient_id", id).single();
+    if (error) {
+      setNote("Couldn't open that patient. Check the internet connection and try again.", true);
+      return;
+    }
+    patientId = data.patient_id;
+    patientRec = data;
+    const rxErr = await loadRxRows();
+    if (rxErr) {
+      setNote("Couldn't load that patient's prescriptions. Check the internet connection and try again.", true);
+      return;
+    }
+    rxIndex = rxRows.length ? 0 : -1;
+    fillPatient(data);
+    showRx();
+    clearMessages();
+    $("r-back-btn").textContent = cameFrom === "checked" ? "Back to list" : "Back to search";
+    show("record");
+  }
+
+  /* ---------- Saving ---------- */
+  function collectRx() {
+    const visitIso = readDate(vin.service_date);
+    if (visitIso === null) return { error: DATE_MSG, field: vin.service_date };
+    if (!visitIso) return { error: "Enter a visit date before saving.", field: vin.service_date };
+    const bad = V_CHARGES.find(k => Number.isNaN(toCents(vin[k].value)));
+    if (bad) return { error: "Prices must be numbers, like 125.00.", field: vin[bad] };
+    recalc();
+    const rec = { service_date: visitIso };
+    ["doctor", "frame", "misc", "lens_type", "notes"].concat(V_RX).forEach(k => {
+      const v = vin[k].value.trim();
+      rec[k] = v === "" ? null : v;
+    });
+    V_CHARGES.forEach(k => { rec[k] = vin[k].value.trim() === "" ? null : toCents(vin[k].value) / 100; });
+    rec.tax = vin.tax.value === "" ? null : Number(vin.tax.value);
+    rec.total = vin.total.value === "" ? null : Number(vin.total.value);
+    return { rec };
+  }
+
+  function collectOrders() {
+    const lines = [];
+    for (const r of orderRows) {
+      if (!rowHasContent(r)) continue;
+      const orderIso = readDate(r.date);
+      if (orderIso === null) return { error: DATE_MSG, field: r.date };
+      if (!orderIso) return { error: "Enter a date on each order line.", field: r.date };
+      const c = toCents(r.price.value);
+      if (Number.isNaN(c)) return { error: "Order prices must be numbers, like 45.00.", field: r.price };
+      if (r.dirty || r.id === null) {
+        calcRow(r);
+        lines.push({ row: r, rec: {
+          nb_date: orderIso,
+          nb_note: r.note.value.trim() || null,
+          nb_price: r.price.value.trim() === "" ? null : c / 100,
+          tax: r.tax.value === "" ? null : Number(r.tax.value),
+          total: r.total.value === "" ? null : Number(r.total.value)
+        } });
+      }
+    }
+    return { lines };
+  }
+
+  /* ---------- Saving happens by itself ---------- */
+  // Checkpoints: leaving the patient or visit, printing, and a minute after your last change.
+  const AUTOSAVE_MS = 60000;
+  let autoTimer = null;
+  let saveChain = Promise.resolve();
+  const byDateDesc = (a, b) =>
+    String(b.service_date || "").localeCompare(String(a.service_date || "")) || (b.prescription_id - a.prescription_id);
+
+  function setStatus(kind, text) {
+    const el = $("r-status");
+    el.className = "rstatus " + kind;
+    el.textContent = text;
+  }
+  function markChanged() {
+    setStatus("dirty", "Unsaved changes");
+    $("r-error").textContent = "";
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(() => saveNow({ quiet: true }), AUTOSAVE_MS);
+  }
+
+  // Does the actual saving. Returns { state: "saved" | "nothing" | "invalid" | "failed", message, field }.
+  async function doSave() {
+    if (!anyDirty()) return { state: "nothing" };
+    if (!pin.last_name.value.trim()) {
+      return { state: "invalid", message: "Enter a last name before this can be saved.", field: pin.last_name };
+    }
+    const pDates = {};
+    for (const k of P_DATES) {
+      const iso = readDate(pin[k]);
+      if (iso === null) return { state: "invalid", message: DATE_MSG, field: pin[k] };
+      pDates[k] = iso || null;
+    }
+    const ord = collectOrders();
+    if (ord.error) return { state: "invalid", message: ord.error, field: ord.field };
+    const lines = ord.lines;
+
+    // A visit is needed for order lines, so a new Rx gets created if lines are being added to it.
+    let rxRec = null;
+    if (rDirty || (lines.length && rxIndex < 0)) {
+      const c = collectRx();
+      if (c.error) return { state: "invalid", message: c.error, field: c.field };
+      rxRec = c.rec;
+    }
+    if (patientId !== null && !pDirty && !rxRec && !lines.length) { oDirty = false; return { state: "nothing" }; }
+
+    // Anything typed while the save is running stays marked as unsaved; a failed save puts the marks back.
+    const was = { p: pDirty, r: rDirty, o: oDirty };
+    const rowWas = lines.map(l => l.row.dirty);
+    pDirty = false; rDirty = false; oDirty = false;
+    lines.forEach(l => { l.row.dirty = false; });
+    const restore = () => {
+      pDirty = pDirty || was.p; rDirty = rDirty || was.r; oDirty = oDirty || was.o;
+      lines.forEach((l, i) => { if (rowWas[i]) l.row.dirty = true; });
+    };
+    const fail = (message) => { restore(); return { state: "failed", message }; };
+    setStatus("busy", "Saving...");
+
+    try {
+      // 1. the patient
+      if (patientId === null || was.p) {
+        const prec = {};
+        P_TEXT.forEach(k => { const v = pin[k].value.trim(); prec[k] = v === "" ? null : v; });
+        P_DATES.forEach(k => { prec[k] = pDates[k]; });
+        P_BOOLS.forEach(k => { prec[k] = pin[k].checked; });
+        const req = patientId === null
+          ? db.from("patients").insert(prec).select().single()
+          : db.from("patients").update(prec).eq("patient_id", patientId).select().single();
+        const { data, error } = await req;
+        if (error) return fail("Couldn't save the patient. Check the internet connection.");
+        patientId = data.patient_id;
+        patientRec = data;
+        $("f_patient_id").value = data.patient_id;
+        $("r-title").textContent = titleFor(data);
+        P_DATES.forEach(k => { if (readDate(pin[k]) === (data[k] || "")) setDate(pin[k], data[k]); });
+      }
+
+      // 2. the prescription
+      let rxId = rxIndex >= 0 ? rxRows[rxIndex].prescription_id : null;
+      if (rxRec) {
+        rxRec.patient_id = patientId;
+        const req = rxIndex >= 0
+          ? db.from("prescriptions").update(rxRec).eq("prescription_id", rxId).select().single()
+          : db.from("prescriptions").insert(rxRec).select().single();
+        const { data, error } = await req;
+        if (error) return fail("The patient saved, but the visit didn't. Check the internet connection.");
+        rxId = data.prescription_id;
+        if (rxIndex >= 0) rxRows[rxIndex] = data; else rxRows.push(data);
+        rxRows.sort(byDateDesc);
+        rxIndex = rxRows.findIndex(r => r.prescription_id === rxId);
+        if (readDate(vin.service_date) === data.service_date) setDate(vin.service_date, data.service_date);
+        renderVisitList();
+      }
+
+      // 3. the order lines
+      if (lines.length) {
+        const existing = lines.filter(l => l.row.id !== null);
+        const fresh = lines.filter(l => l.row.id === null);
+        if (fresh.length) {
+          const { data, error } = await db.from("orders")
+            .insert(fresh.map(l => Object.assign({ prescription_id: rxId }, l.rec))).select();
+          if (error) return fail("The visit saved, but the order lines didn't. Check the internet connection.");
+          fresh.forEach((l, i) => { if (data && data[i]) l.row.id = data[i].order_id; });
+        }
+        for (const l of existing) {
+          const { error } = await db.from("orders").update(l.rec).eq("order_id", l.row.id);
+          if (error) return fail("The visit saved, but an order line didn't. Check the internet connection.");
+        }
+        lines.forEach(l => {
+          if (readDate(l.row.date) === l.rec.nb_date) setDate(l.row.date, l.rec.nb_date);
+        });
+      }
+
+      if (anyDirty()) markChanged();
+      else setStatus("ok", "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+      return { state: "saved" };
+    } catch (e) {
+      return fail("Something went wrong while saving. Check the internet connection.");
+    }
+  }
+
+  function saveNow(opts) {
+    opts = opts || {};
+    clearTimeout(autoTimer);
+    const run = saveChain.then(() => doSave());
+    saveChain = run.then(() => {}, () => {});
+    return run.then((r) => {
+      if (r.state === "invalid" || r.state === "failed") {
+        setStatus("dirty", "Unsaved changes");
+        $("r-error").textContent = r.message;
+        if (r.state === "invalid" && !opts.quiet && r.field) r.field.focus();
+        if (r.state === "failed" && opts.quiet) autoTimer = setTimeout(() => saveNow({ quiet: true }), AUTOSAVE_MS);
+      } else {
+        $("r-error").textContent = "";
+      }
+      return r;
+    });
+  }
+
+  // Called before leaving the patient or visit, and before printing. True means it's fine to go ahead.
+  async function ensureSaved(purpose) {
+    clearTimeout(autoTimer);
+    if (!anyDirty()) return true;
+    const r = await saveNow();
+    if (r.state === "saved" || r.state === "nothing") return true;
+    const ok = purpose === "print"
+      ? confirm(r.message + "\n\nPrint anyway? These changes will stay unsaved.")
+      : confirm(r.message + "\n\nLeave without saving? These changes will be lost.");
+    if (!ok) { if (r.field) r.field.focus(); return false; }
+    if (purpose !== "print") { pDirty = false; rDirty = false; oDirty = false; }
+    return true;
+  }
+
+  rform.addEventListener("submit", (e) => { e.preventDefault(); saveNow(); });
+
+  $("r-back-btn").addEventListener("click", async () => {
+    if (!(await ensureSaved())) return;
+    pDirty = false; rDirty = false; oDirty = false;
+    clearMessages();
+    if (cameFrom === "checked" && checkedFind) { show("checked"); loadChecked(Math.max(checkedLoaded, CHECK_PAGE)); }
+    else goSearch(false);
+  });
+
+  window.addEventListener("beforeunload", (e) => { if (anyDirty()) { e.preventDefault(); e.returnValue = ""; } });
+
+  /* ---------- Typing an insurance number checks its box ---------- */
+  // When you leave the VSP number or EyeMed number box after entering or changing a number, its check box gets checked.
+  // Just tabbing through a number that was already there changes nothing, and clearing a number leaves the check alone.
+  // (The EyeMed number is kept in the database under its old name, ecpa_number.)
+  function checkBoxOnNumber(numberEl, boxEl) {
+    let before = "";
+    numberEl.addEventListener("focus", () => { before = numberEl.value.trim(); });
+    numberEl.addEventListener("blur", () => {
+      const v = numberEl.value.trim();
+      if (v !== "" && v !== before && !boxEl.checked) {
+        boxEl.checked = true;
+        boxEl.dispatchEvent(new Event("input", { bubbles: true }));   // counts as a change, so it saves
+      }
+    });
+  }
+  checkBoxOnNumber(pin.vsp_number, pin.ck_vsp);
+  checkBoxOnNumber(pin.ecpa_number, pin.ck_eye_med);
+
+  /* ---------- Tab and Enter follow one order ---------- */
+  // Change the order here and both keys follow it. Check boxes and buttons are left out (mouse only).
+  const FIELD_ORDER = [
+    "f_last_name", "f_first_name", "f_address", "f_city", "f_state", "f_zip_code",
+    "f_home_phone", "f_work_phone", "f_cell_phone", "f_email",
+    "f_birthday", "f_medical_no", "f_vsp_number", "f_ecpa_number", "f_bcbs_number",
+    "f_occupation", "f_employer", "f_insurance_holder",
+    "v_service_date", "v_doctor",
+    "v_rsph", "v_rcyl", "v_raxis", "v_radd",
+    "v_lsph", "v_lcyl", "v_laxis", "v_ladd",
+    "v_od_prism", "v_od_base", "v_os_prism", "v_os_base",
+    "v_rhght", "v_lhght", "v_rpd", "v_lpd",
+    "v_lens_type", "v_misc", "v_frame",
+    "v_odcl_brand", "v_odcl_qty", "v_odcl_bc", "v_odcl_spr", "v_odcl_cyl", "v_odcl_axis",
+    "v_oscl_brand", "v_oscl_qty", "v_oscl_bc", "v_oscl_spr", "v_oscl_cyl", "v_oscl_axis",
+    "v_lens_chg", "v_misc_chg", "v_frame_chg", "v_contacts_chg", "v_exam", "v_discount",
+    "v_notes"
+  ];   // the order lines (date, item, price on each line) follow these
+  FIELD_ORDER.forEach((id, i) => { $(id).tabIndex = i + 1; });   // Tab goes 1, 2, 3 ... in this order
+
+  function orderedBoxes() {
+    const lines = [];
+    orderRows.forEach(r => lines.push(r.date, r.note, r.price));
+    return FIELD_ORDER.map(id => $(id)).concat(lines).filter(x => !x.readOnly && !x.disabled && !x.closest(".hidden"));
+  }
+
+  // Enter moves to the next box and Shift+Enter goes back. Notes keeps Enter for a new line.
+  rform.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.ctrlKey || e.altKey || e.metaKey) return;
+    const el = e.target;
+    if (el.tagName !== "INPUT") return;
+    const boxes = orderedBoxes();
+    const i = boxes.indexOf(el);
+    if (i < 0) return;                 // check boxes and buttons: leave Enter alone
+    e.preventDefault();
+    const next = boxes[i + (e.shiftKey ? -1 : 1)];
+    if (next) {
+      next.focus();
+      if (next.type === "text" || next.type === "email") next.select();
+    }
+  });
+
+  /* ---------- Printing the record (top half of the sheet) ---------- */
+  const MAX_PRINT_ORDERS = 6;   // more than this would run past the fold
+  const esc = (t) => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  function moneyOut(str) {
+    const c = toCents(str);
+    return (String(str).trim() === "" || Number.isNaN(c)) ? esc(str) : (c / 100).toFixed(2);
+  }
+
+  function buildPrintSheet() {
+    const val = (el) => el.value.trim();
+    const name = esc([val(pin.first_name), val(pin.last_name)].filter(Boolean).join(" "));
+    const cityLine = [val(pin.city), [val(pin.state), val(pin.zip_code)].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    const addr = esc([val(pin.address), cityLine].filter(Boolean).join(", "));
+    const visit = esc(val(vin.service_date)) + (val(vin.doctor) ? " &nbsp;|&nbsp; " + esc(val(vin.doctor)) : "");
+
+    const rxTable = (head, rows, leftCols) =>
+      "<table><tr><th></th>" + head.map((h, i) => "<th" + (leftCols.includes(i) ? ' class="l"' : "") + ">" + h + "</th>").join("") + "</tr>" +
+      rows.map(([label, names]) => '<tr><td class="l lab">' + label + "</td>" +
+        names.map((n, i) => "<td" + (leftCols.includes(i) ? ' class="l"' : "") + ">" + esc(vin[n].value) + "</td>").join("") + "</tr>").join("") +
+      "</table>";
+
+    const price = (label, key, bold) =>
+      '<td class="l plab">' + label + '</td><td class="r">' + (bold ? "<b>" : "") + moneyOut(vin[key].value) + (bold ? "</b>" : "") + "</td>";
+
+    const lines = orderRows.filter(rowHasContent);
+    const shown = lines.slice(0, MAX_PRINT_ORDERS);
+    const orders = shown.map(r =>
+      '<tr><td class="l">' + esc(r.date.value) + '</td><td class="l">' + esc(r.note.value) + '</td><td class="r">' +
+      moneyOut(r.price.value) + '</td><td class="r">' + moneyOut(r.tax.value) + '</td><td class="r">' + moneyOut(r.total.value) + "</td></tr>").join("");
+    const more = lines.length > shown.length
+      ? '<div class="k" style="text-align:right;margin-top:1pt">+' + (lines.length - shown.length) + " more line" + (lines.length - shown.length === 1 ? "" : "s") + " not shown</div>" : "";
+
+    return '<div class="half">' +
+      '<div class="hdr"><span class="shop">Spec Shoppe</span><span>Visit ' + visit + "</span></div>" +
+      '<div class="pat"><div><div class="name">' + name + "</div><div>" + addr + "</div></div>" +
+      '<div style="text-align:right"><span class="k">Home</span> ' + esc(val(pin.home_phone)) + ' &nbsp;&nbsp; <span class="k">Work</span> ' + esc(val(pin.work_phone)) +
+      ' &nbsp;&nbsp; <span class="k">Cell</span> ' + esc(val(pin.cell_phone)) + '<br><span class="k">Email</span> ' + esc(val(pin.email)) + "</div></div>" +
+      '<div class="row" style="margin-top:2pt">' +
+        '<div style="flex:1.45"><div class="h">Glasses Rx</div>' + rxTable(GLASSES_HEAD, GLASSES_ROWS, []) + "</div>" +
+        '<div style="flex:1"><div class="h">Contacts Rx</div>' + rxTable(CONTACT_HEAD, CONTACT_ROWS, [0]) + "</div></div>" +
+      '<div class="row">' +
+        '<div style="flex:1.45" class="det"><div class="h">Details</div>' +
+          '<span><span class="k">Lens</span> ' + esc(val(vin.lens_type)) + '</span><span><span class="k">Misc</span> ' + esc(val(vin.misc)) +
+          '</span><span><span class="k">Frame</span> ' + esc(val(vin.frame)) + "</span>" +
+          '<div class="h" style="margin-top:4pt">Notes</div><div class="notes">' + esc(vin.notes.value) + "</div></div>" +
+        '<div style="flex:1"><div class="h">Pricing</div><table style="table-layout:fixed"><colgroup><col style="width:30%"><col style="width:20%"><col style="width:30%"><col style="width:20%"></colgroup>' +
+          "<tr>" + price("Lens", "lens_chg") + price("Exam", "exam") + "</tr>" +
+          "<tr>" + price("Misc", "misc_chg") + price("Discount", "discount") + "</tr>" +
+          "<tr>" + price("Frame", "frame_chg") + price("Tax", "tax") + "</tr>" +
+          "<tr>" + price("Contacts", "contacts_chg") + price("Total", "total", true) + "</tr></table></div></div>" +
+      '<div style="margin-top:5pt"><div class="h">Orders</div>' +
+        '<table><tr><th class="l" style="width:48pt">Date</th><th class="l">Item</th><th style="width:48pt">Price</th><th style="width:44pt">Tax</th><th style="width:48pt">Total</th></tr>' +
+        orders + "</table>" + more + "</div></div>";
+  }
+
+  /* ---------- Printing just the prescription (for the patient) ---------- */
+  const SHOP_NAME = "Spec Shoppe Inc.";
+  // Your address, one line each, printed at the top right of the Rx slip. For example:
+  // const SHOP_ADDRESS = ["123 Main St", "Maryville, MO 64468", "(660) 555-0100"];
+  const SHOP_ADDRESS = ["1713 South Main", "Maryville, MO  64468", "(660) 582-8911"];
+
+  function buildRxSheet() {
+    const val = (el) => el.value.trim();
+    const name = esc([val(pin.first_name), val(pin.last_name)].filter(Boolean).join(" "));
+    const cityLine = [val(pin.city), [val(pin.state), val(pin.zip_code)].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    const addr = esc([val(pin.address), cityLine].filter(Boolean).join(", "));
+    const table = (head, rows, leftCols) =>
+      "<table><tr><th></th>" + head.map((h, i) => "<th" + (leftCols.includes(i) ? ' class="l"' : "") + ">" + h + "</th>").join("") + "</tr>" +
+      rows.map(([label, names]) => '<tr><td class="l lab">' + label + "</td>" +
+        names.map((n, i) => "<td" + (leftCols.includes(i) ? ' class="l"' : "") + ">" + esc(vin[n].value) + "</td>").join("") + "</tr>").join("") +
+      "</table>";
+    // Columns left off the slip: HGHT and PD (glasses), QTY (contacts)
+    const trim = (head, rows, omit) => {
+      const keep = head.map((h, i) => omit.includes(h) ? -1 : i).filter(i => i >= 0);
+      return { head: keep.map(i => head[i]), rows: rows.map(([label, names]) => [label, keep.map(i => names[i])]) };
+    };
+    const G = trim(GLASSES_HEAD, GLASSES_ROWS, ["HGHT", "PD"]);
+    const C = trim(CONTACT_HEAD, CONTACT_ROWS, ["QTY"]);
+    const hasData = (rows) => rows.some(([, names]) => names.some(n => val(vin[n]) !== ""));
+    let showGlasses = hasData(G.rows), showContacts = hasData(C.rows);
+    if (!showGlasses && !showContacts) { showGlasses = true; showContacts = true; }   // nothing entered yet: print both blank
+    return '<div class="half slip">' +
+      '<div class="shead"><span class="sshop">' + esc(SHOP_NAME) + '</span><div class="saddr">' + SHOP_ADDRESS.map(esc).join("<br>") + "</div></div>" +
+      '<div class="stitle">PRESCRIPTION</div>' +
+      '<div class="spat"><div><div class="sname">' + name + "</div><div>" + addr + "</div></div>" +
+        '<div style="text-align:right"><div><span class="k">Date of service</span> &nbsp; <b>' + esc(val(vin.service_date)) + "</b></div>" +
+        '<div><span class="k">Doctor</span> &nbsp; <b>' + esc(val(vin.doctor)) + "</b></div></div></div>" +
+      (showGlasses ? '<div class="sh">Glasses</div>' + table(G.head, G.rows, []) : "") +
+      (showContacts ? '<div class="sh">Contacts</div>' + table(C.head, C.rows, [0]) : "") +
+      '<div class="ssig"><div class="sline"></div><div class="scap">Doctor signature</div></div>' +
+      "</div>";
+  }
+  $("print-rx-btn").addEventListener("click", async () => {
+    if (!(await ensureSaved("print"))) return;
+    $("print-sheet").innerHTML = buildRxSheet();
+    window.print();
+  });
+
+  $("print-btn").addEventListener("click", async () => {
+    if (!(await ensureSaved("print"))) return;
+    $("print-sheet").innerHTML = buildPrintSheet();
+    window.print();
+  });
+
+  /* ---------- Search ---------- */
+  const searchInput = $("search-input");
+  const resultsEl = $("results");
+  const noteEl = $("search-note");
+  let searchSeq = 0;
+  let searchTimer = null;
+
+  function setNote(text, bad) {
+    noteEl.textContent = text;
+    noteEl.style.color = bad ? "var(--red)" : "";
+    noteEl.style.fontWeight = bad ? "bold" : "";
+  }
+
+  function goSearch(focus) {
+    show("patients");
+    if (searchInput.value.trim()) runSearch();
+    if (focus !== false) searchInput.focus();
+  }
+
+  // A two-digit year could be 19xx or 20xx, so a birthday search looks for both (never a date in the future).
+  function birthdayCandidates(digits) {
+    const mm = +digits.slice(0, 2), dd = +digits.slice(2, 4), yy = +digits.slice(4, 6);
+    const now = new Date();
+    return [1900 + yy, 2000 + yy].filter(year => {
+      const d = new Date(year, mm - 1, dd);
+      return d.getFullYear() === year && d.getMonth() === mm - 1 && d.getDate() === dd && d <= now;
+    }).map(year => year + "-" + String(mm).padStart(2, "0") + "-" + String(dd).padStart(2, "0"));
+  }
+
+  async function runSearch() {
+    const raw = searchInput.value.trim();
+    const mine = ++searchSeq;
+    const parts = raw.split(/\s+/).filter(Boolean).slice(0, 4);
+    const nameTokens = [];
+    let birthdays = null, badDate = false;
+    parts.forEach(part => {
+      if (/^[\d\/\-.]+$/.test(part)) {              // numbers are a birthday
+        const digits = part.replace(/\D/g, "");
+        const c = digits.length === 6 ? birthdayCandidates(digits) : [];
+        if (c.length) birthdays = c; else badDate = true;
+      } else {
+        const t = part.replace(/[,()"\\%*_]/g, "");
+        if (t) nameTokens.push(t);
+      }
+    });
+
+    resultsEl.innerHTML = "";
+    if (!parts.length || (!nameTokens.length && !birthdays && !badDate)) {
+      setNote("Type part of a name, or a birthday as six digits like 01/02/65. Matches appear as you type.");
+      return;
+    }
+    if (badDate) {
+      setNote("Type a birthday as six digits, like 01/02/65.");
+      return;
+    }
+
+    let q = db.from("patients")
+      .select("patient_id,last_name,first_name,birthday,city,home_phone,work_phone,cell_phone")
+      .order("last_name").order("first_name").limit(50);
+    nameTokens.forEach(t => {
+      const p = "%" + t + "%";
+      q = q.or("last_name.ilike." + p + ",first_name.ilike." + p);
+    });
+    if (birthdays) q = q.in("birthday", birthdays);
+
+    const { data, error } = await q;
+    if (mine !== searchSeq) return;   // a newer search is already running
+
+    resultsEl.innerHTML = "";
+    if (error) {
+      setNote("The search didn't work. Check the internet connection and try again.", true);
+      return;
+    }
+    if (!data.length) {
+      setNote("No patient found for \"" + raw + "\". Check the spelling, or use Add new patient.");
+      return;
+    }
+    setNote(data.length === 50 ? "Showing the first 50 matches. Type more to narrow it down."
+                               : data.length + (data.length === 1 ? " match." : " matches."));
+    data.forEach(p => resultsEl.appendChild(patientRow(p, "search")));
+  }
+
+  // One patient in a list (search results and the check box lists). "from" is where Back should return to.
+  function patientRow(p, from) {
+    const b = document.createElement("button");
+    b.type = "button";
+    const strong = document.createElement("strong");
+    strong.textContent = [p.last_name, p.first_name].filter(Boolean).join(", ");
+    const span = document.createElement("span");
+    const phone = p.cell_phone || p.home_phone || p.work_phone || "";
+    const bits = [];
+    if (p.birthday) bits.push("Born " + fmtDate(p.birthday));
+    if (p.city) bits.push(p.city);
+    if (phone) bits.push(phone);
+    span.textContent = bits.join("   |   ");
+    b.appendChild(strong); b.appendChild(span);
+    b.addEventListener("click", () => { cameFrom = from; openRecord(p.patient_id); });
+    return b;
+  }
+
+  /* ---------- Find by check box (main menu buttons) ---------- */
+  const FINDS = [
+    { col: "ck_vsp", label: "VSP", button: "Find VSP patients", cls: "" },
+    { col: "ck_eye_med", label: "Eye Med", button: "Find Eye Med patients", cls: "" },
+    { col: "ck_xix", label: "Medicaid", button: "Find Medicaid patients", cls: "" },
+    { col: "ck_home_state_health", label: "Home State Health", button: "Find Home State Health patients", cls: "" },
+    { col: "ck_abbey_convent", label: "Bill Abbey/Convent", button: "Find Abbey/Convent patients", cls: "" },
+    { col: "ck_lions", label: "Bill Lions Club", button: "Find Lions Club patients", cls: "" },
+    { col: "ck_other_ins", label: "Bill Other Ins", button: "Find Other Ins patients", cls: "" },
+    { col: "ck_pt_took_frames", label: "Pt Took Frame", button: "Find Pt Took Frame", cls: "claim" },
+    { col: "ck_payments", label: "Payments", button: "Find Payments", cls: "claim" },
+    { col: "ck_filed", label: "Filed", button: "Find Filed", cls: "claim" }
+  ];
+  const CHECK_PAGE = 200;
+  let checkedFind = null;    // which box is being listed
+  let checkedLoaded = 0;     // how many patients are on the list right now
+  let checkedSeq = 0;
+
+  FINDS.forEach(f => {
+    const b = document.createElement("button");
+    b.type = "button";
+    if (f.cls) b.className = f.cls;
+    b.textContent = f.button;
+    b.addEventListener("click", () => openChecked(f));
+    $("find-buttons").appendChild(b);
+  });
+
+  function openChecked(f) {
+    checkedFind = f;
+    checkedLoaded = 0;
+    $("checked-title").textContent = "Patients with " + f.label + " checked";
+    $("checked-results").innerHTML = "";
+    $("checked-more").classList.add("hidden");
+    $("checked-note").textContent = "Loading...";
+    $("checked-note").style.color = ""; $("checked-note").style.fontWeight = "";
+    show("checked");
+    loadChecked(CHECK_PAGE);
+  }
+
+  // Loads the first "upTo" patients on the list (so coming back to the list refreshes it without losing your place).
+  async function loadChecked(upTo) {
+    const mine = ++checkedSeq;
+    const note = $("checked-note");
+    const { data, error, count } = await db.from("patients")
+      .select("patient_id,last_name,first_name,birthday,city,home_phone,work_phone,cell_phone", { count: "exact" })
+      .eq(checkedFind.col, true)
+      .order("last_name").order("first_name").order("patient_id")
+      .range(0, upTo - 1);
+    if (mine !== checkedSeq) return;
+    const box = $("checked-results");
+    box.innerHTML = "";
+    if (error) {
+      note.textContent = "The list didn't load. Check the internet connection and try again.";
+      note.style.color = "var(--red)"; note.style.fontWeight = "bold";
+      return;
+    }
+    note.style.color = ""; note.style.fontWeight = "";
+    checkedLoaded = data.length;
+    data.forEach(p => box.appendChild(patientRow(p, "checked")));
+    const total = count == null ? data.length : count;
+    note.textContent = total === 0
+      ? "No patients have " + checkedFind.label + " checked."
+      : total + (total === 1 ? " patient" : " patients") + " with " + checkedFind.label + " checked." +
+        (total > data.length ? " Showing the first " + data.length + "." : "");
+    $("checked-more").classList.toggle("hidden", total <= data.length);
+  }
+  $("checked-more").addEventListener("click", () => loadChecked(checkedLoaded + CHECK_PAGE));
+
+  let cameFrom = "search";   // where "Back" on a patient should return to: the search or a check box list
+
+  searchInput.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(runSearch, 250);
+  });
+  $("new-patient-btn").addEventListener("click", () => {
+    const typed = searchInput.value.trim().split(/\s+/)[0] || "";
+    openNewRecord(/^[A-Za-z'-]+$/.test(typed) ? typed : "");
+  });
+
+  /* ---------- Vendors ---------- */
+  const VENDOR_PAGE = 200;
+  const VF = ["company_name", "address", "city", "state", "zip_code", "phone", "fax", "account_number", "sales_rep", "notes"];
+  const vf = {};
+  VF.forEach(k => { vf[k] = $("vd_" + k); });
+  let vendorLoaded = 0, vendorSeq = 0, vendorTimer = null, vendorSearchTimer = null;
+  let vendorId = null, vDirty = false, vChain = Promise.resolve();
+
+  function openVendorList() {
+    show("vendors");
+    loadVendors(VENDOR_PAGE);
+    $("vendor-search").focus();
+  }
+
+  // Loads the first "upTo" vendors that match the search box (all of them when it is empty), A to Z.
+  async function loadVendors(upTo) {
+    const mine = ++vendorSeq;
+    const note = $("vendor-note"), box = $("vendor-results");
+    const tokens = $("vendor-search").value.trim().split(/\s+/).map(t => t.replace(/[,()"\\%*_]/g, "")).filter(Boolean).slice(0, 4);
+    let q = db.from("vendors")
+      .select("vendor_id,company_name,city,state,phone,sales_rep", { count: "exact" })
+      .order("company_sort").order("vendor_id").range(0, upTo - 1);
+    tokens.forEach(t => {
+      const p = "%" + t + "%";
+      q = q.or("company_name.ilike." + p + ",sales_rep.ilike." + p + ",notes.ilike." + p);
+    });
+    const { data, error, count } = await q;
+    if (mine !== vendorSeq) return;
+    box.innerHTML = "";
+    note.style.color = ""; note.style.fontWeight = "";
+    if (error) {
+      note.textContent = "The list didn't load. Check the internet connection and try again.";
+      note.style.color = "var(--red)"; note.style.fontWeight = "bold";
+      return;
+    }
+    vendorLoaded = data.length;
+    const total = count == null ? data.length : count;
+    data.forEach(v => {
+      const b = document.createElement("button");
+      b.type = "button";
+      const strong = document.createElement("strong");
+      strong.textContent = v.company_name;
+      const span = document.createElement("span");
+      const place = [v.city, v.state].filter(Boolean).join(", ");
+      span.textContent = [place, v.phone, v.sales_rep].filter(Boolean).join("   |   ");
+      b.appendChild(strong); b.appendChild(span);
+      b.addEventListener("click", () => openVendor(v.vendor_id));
+      box.appendChild(b);
+    });
+    if (total === 0) note.textContent = tokens.length ? "No vendors match. Check the spelling, or use Add new vendor." : "No vendors yet.";
+    else if (!tokens.length) note.textContent = total + " vendors" + (total > data.length ? ". Showing the first " + data.length + "." : ".");
+    else note.textContent = total + (total === 1 ? " match" : " matches") + (total > data.length ? ". Showing the first " + data.length + "." : ".");
+    $("vendor-more").classList.toggle("hidden", total <= data.length);
+  }
+  $("vendor-search").addEventListener("input", () => {
+    clearTimeout(vendorSearchTimer);
+    vendorSearchTimer = setTimeout(() => loadVendors(VENDOR_PAGE), 250);
+  });
+  $("vendor-more").addEventListener("click", () => loadVendors(vendorLoaded + VENDOR_PAGE));
+
+  /* --- one vendor --- */
+  function vStatus(kind, text) {
+    const el = $("vendor-status");
+    el.className = "rstatus " + kind;
+    el.textContent = text;
+  }
+  function fillVendor(rec) {
+    VF.forEach(k => { vf[k].value = (rec && rec[k]) || ""; });
+    vendorId = rec ? rec.vendor_id : null;
+    $("vendor-title").textContent = rec ? (rec.company_name || "Vendor") : "New vendor";
+    $("vendor-access").textContent = rec && rec.access_id ? "Access ID " + rec.access_id : "";
+    $("vendor-remove").classList.toggle("hidden", !rec);
+    $("vendor-error").textContent = "";
+    clearTimeout(vendorTimer);
+    vDirty = false;
+    vStatus("", "");
+  }
+  function openNewVendor() {
+    const typed = $("vendor-search").value.trim();
+    fillVendor(null);
+    if (typed) vf.company_name.value = typed;   // saved only once something else is typed
+    show("vendor");
+    vf.company_name.focus();
+  }
+  async function openVendor(id) {
+    const { data, error } = await db.from("vendors").select("*").eq("vendor_id", id).single();
+    if (error) {
+      const note = $("vendor-note");
+      note.textContent = "Couldn't open that vendor. Check the internet connection and try again.";
+      note.style.color = "var(--red)"; note.style.fontWeight = "bold";
+      return;
+    }
+    fillVendor(data);
+    show("vendor");
+  }
+  $("new-vendor-btn").addEventListener("click", openNewVendor);
+
+  // Saving is automatic here too: when you leave, and a minute after your last change.
+  $("vendor-form").addEventListener("input", () => {
+    vDirty = true;
+    vStatus("dirty", "Unsaved changes");
+    $("vendor-error").textContent = "";
+    clearTimeout(vendorTimer);
+    vendorTimer = setTimeout(() => vSaveNow({ quiet: true }), AUTOSAVE_MS);
+  });
+
+  async function vDoSave() {
+    if (!vDirty) return { state: "nothing" };
+    if (!vf.company_name.value.trim()) {
+      return { state: "invalid", message: "Enter a company name before this can be saved.", field: vf.company_name };
+    }
+    const rec = {};
+    VF.forEach(k => { const v = vf[k].value.trim(); rec[k] = v === "" ? null : v; });
+    vDirty = false;
+    vStatus("busy", "Saving...");
+    const req = vendorId === null
+      ? db.from("vendors").insert(rec).select().single()
+      : db.from("vendors").update(rec).eq("vendor_id", vendorId).select().single();
+    const { data, error } = await req;
+    if (error) { vDirty = true; return { state: "failed", message: "Couldn't save. Check the internet connection." }; }
+    vendorId = data.vendor_id;
+    $("vendor-title").textContent = data.company_name || "Vendor";
+    $("vendor-remove").classList.remove("hidden");
+    if (vDirty) { vStatus("dirty", "Unsaved changes"); }
+    else vStatus("ok", "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+    return { state: "saved" };
+  }
+  function vSaveNow(opts) {
+    opts = opts || {};
+    clearTimeout(vendorTimer);
+    const run = vChain.then(() => vDoSave());
+    vChain = run.then(() => {}, () => {});
+    return run.then((r) => {
+      if (r.state === "invalid" || r.state === "failed") {
+        vStatus("dirty", "Unsaved changes");
+        $("vendor-error").textContent = r.message;
+        if (r.state === "invalid" && !opts.quiet && r.field) r.field.focus();
+        if (r.state === "failed" && opts.quiet) vendorTimer = setTimeout(() => vSaveNow({ quiet: true }), AUTOSAVE_MS);
+      } else {
+        $("vendor-error").textContent = "";
+      }
+      return r;
+    });
+  }
+  async function vEnsureSaved() {
+    clearTimeout(vendorTimer);
+    if (!vDirty) return true;
+    const r = await vSaveNow();
+    if (r.state === "saved" || r.state === "nothing") return true;
+    if (!confirm(r.message + "\n\nLeave without saving? These changes will be lost.")) {
+      if (r.field) r.field.focus();
+      return false;
+    }
+    vDirty = false;
+    return true;
+  }
+
+  $("vendor-back").addEventListener("click", async () => {
+    if (!(await vEnsureSaved())) return;
+    vDirty = false;
+    show("vendors");
+    loadVendors(Math.max(vendorLoaded, VENDOR_PAGE));
+  });
+
+  $("vendor-remove").addEventListener("click", async () => {
+    if (vendorId === null) return;
+    if (!confirm("Remove this vendor? This can't be undone.")) return;
+    const { error } = await db.from("vendors").delete().eq("vendor_id", vendorId);
+    if (error) { $("vendor-error").textContent = "Couldn't remove it. Check the internet connection."; return; }
+    vDirty = false;
+    clearTimeout(vendorTimer);
+    show("vendors");
+    loadVendors(Math.max(vendorLoaded, VENDOR_PAGE));
+  });
+
+  // Enter moves to the next box (Shift+Enter goes back); Notes keeps Enter for a new line.
+  $("vendor-form").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.target.tagName !== "INPUT") return;
+    const boxes = VF.map(k => vf[k]);
+    const i = boxes.indexOf(e.target);
+    if (i < 0) return;
+    e.preventDefault();
+    const next = boxes[i + (e.shiftKey ? -1 : 1)];
+    if (next) { next.focus(); if (next.type === "text") next.select(); }
+  });
+  window.addEventListener("beforeunload", (e) => { if (vDirty) { e.preventDefault(); e.returnValue = ""; } });
+
+  /* ---------- Main menu, sign in, sign out ---------- */
+  async function checkDatabase() {
+    const status = $("status");
+    status.className = "status";
+    status.textContent = "Checking the database...";
+    const { count, error } = await db.from("patients").select("*", { count: "exact", head: true });
+    if (error) {
+      status.className = "status bad";
+      status.textContent = "Signed in, but the database didn't answer. Check the internet connection and try again.";
+    } else {
+      status.className = "status ok";
+      status.textContent = "Connected. Patients on file: " + count + ".";
+    }
+  }
+
+  function enterMenu(session) {
+    $("who").textContent = session.user.email;
+    show("menu");
+    checkDatabase();
+  }
+
+  $("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("login-btn");
+    const err = $("login-error");
+    err.textContent = "";
+    btn.disabled = true;
+    btn.textContent = "Signing in...";
+    const { data, error } = await db.auth.signInWithPassword({
+      email: $("email").value.trim(),
+      password: $("password").value
+    });
+    btn.disabled = false;
+    btn.textContent = "Sign in";
+    if (error) {
+      err.textContent = "That email and password didn't match. Check them and try again.";
+      return;
+    }
+    $("password").value = "";
+    enterMenu(data.session);
+  });
+
+  $("signout-btn").addEventListener("click", async () => {
+    await db.auth.signOut();
+    $("who").textContent = "";
+    searchInput.value = "";
+    resultsEl.innerHTML = "";
+    show("login");
+  });
+
+  document.querySelectorAll("[data-go]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const go = btn.dataset.go;
+      if (go === "menu") { show("menu"); checkDatabase(); }
+      else if (go === "patients") goSearch(true);
+      else if (go === "vendors") openVendorList();
+      else show(go);
+    });
+  });
+
+  (async function start() {
+    const { data } = await db.auth.getSession();
+    if (data.session) enterMenu(data.session);
+    else show("login");
+  })();
+</script>
+</body>
+</html>
