@@ -100,6 +100,13 @@
   .recrow { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
   .recrow label { width: 150px; }
   .rl { font-size: 10pt; }
+  .rectools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 10px; }
+  .rectools .note { margin: 0; flex: 1 1 260px; }
+  .rectools button { padding: 6px 12px; }
+  .recitem { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: center; }
+  .recitem > input { width: 20px; height: 20px; accent-color: var(--blue); margin: 0; }
+  .recitem.skip button { opacity: 0.5; }
+  .recitem.skip button strong { text-decoration: line-through; }
 
   /* Vendors */
   .vhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -538,6 +545,11 @@
       <button type="button" class="secondary" id="recall-print-list" disabled>Print list</button>
     </div>
     <p class="note" id="recall-note">Type the two dates as six digits, like 01/01/27, then click Show.</p>
+    <div class="rectools hidden" id="recall-tools">
+      <span class="note">Uncheck anyone who has already scheduled, and they are left off the printed list.</span>
+      <button type="button" class="secondary" id="recall-check-all">Check all</button>
+      <button type="button" class="secondary" id="recall-check-none">Uncheck all</button>
+    </div>
     <div class="results" id="recall-results"></div>
     <button type="button" class="secondary" data-go="menu">Back to main menu</button>
   </section>
@@ -1605,12 +1617,30 @@
   const recallCity = (r) => [r.city, [r.state, r.zip_code].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   const hasMailingAddress = (r) => !!(r.address && r.address.trim() && (r.city || r.zip_code));
 
+  let recallRange = null;                // the dates the list on screen is for
+  const recallSkipped = new Set();       // patients you unchecked: left off the printed list (and the postcards later)
+  const recallPicked = () => recallRows.filter(r => !recallSkipped.has(r.patient_id));
+
+  function refreshRecallSummary() {
+    if (!recallRange) return;
+    const { a, b } = recallRange;
+    const picked = recallPicked();
+    const missing = picked.filter(r => !hasMailingAddress(r)).length;
+    recallNote(recallRows.length === 0
+      ? "No recalls are due from " + fmtDate(a) + " to " + fmtDate(b) + "."
+      : recallRows.length + (recallRows.length === 1 ? " patient is" : " patients are") + " due from " + fmtDate(a) + " to " + fmtDate(b) + ". " +
+        picked.length + " checked to print." + (missing ? " " + missing + " of those " + (missing === 1 ? "has" : "have") + " no mailing address." : ""));
+    $("recall-print-list").disabled = picked.length === 0;
+    $("recall-tools").classList.toggle("hidden", recallRows.length === 0);
+  }
+
   async function loadRecalls() {
     const mine = ++recallSeq;
     const box = $("recall-results");
     const a = readDate(recallFrom), b = readDate(recallTo);
-    recallRows = [];
+    recallRows = []; recallRange = null;
     $("recall-print-list").disabled = true;
+    $("recall-tools").classList.add("hidden");
     if (a === null || b === null) { box.innerHTML = ""; recallNote("Enter dates as six digits, like 01/02/27.", true); return; }
     if (!a || !b) { box.innerHTML = ""; recallNote("Enter a From date and a To date."); return; }
     if (a > b) { box.innerHTML = ""; recallNote("The From date is after the To date.", true); return; }
@@ -1620,7 +1650,19 @@
     box.innerHTML = "";
     if (error) { recallNote("The list didn't load. Check the internet connection and try again.", true); return; }
     recallRows = data;
+    recallRange = { a, b };
     data.forEach(r => {
+      const item = document.createElement("div");
+      item.className = "recitem" + (recallSkipped.has(r.patient_id) ? " skip" : "");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !recallSkipped.has(r.patient_id);
+      cb.setAttribute("aria-label", "Include " + [r.last_name, r.first_name].filter(Boolean).join(" ") + " on the printed list");
+      cb.addEventListener("change", () => {
+        if (cb.checked) recallSkipped.delete(r.patient_id); else recallSkipped.add(r.patient_id);
+        item.classList.toggle("skip", !cb.checked);
+        refreshRecallSummary();
+      });
       const btn = document.createElement("button");
       btn.type = "button";
       const strong = document.createElement("strong");
@@ -1633,27 +1675,37 @@
       span.textContent = bits.join("   |   ");
       btn.appendChild(strong); btn.appendChild(span);
       btn.addEventListener("click", () => { cameFrom = "recalls"; openRecord(r.patient_id); });
-      box.appendChild(btn);
+      item.appendChild(cb); item.appendChild(btn);
+      box.appendChild(item);
     });
-    const missing = data.filter(r => !hasMailingAddress(r)).length;
-    recallNote(data.length === 0
-      ? "No recalls are due from " + fmtDate(a) + " to " + fmtDate(b) + "."
-      : data.length + (data.length === 1 ? " patient is" : " patients are") + " due from " + fmtDate(a) + " to " + fmtDate(b) + "." +
-        (missing ? " " + missing + " " + (missing === 1 ? "has" : "have") + " no mailing address." : ""));
-    $("recall-print-list").disabled = data.length === 0;
+    refreshRecallSummary();
   }
   $("recall-show").addEventListener("click", loadRecalls);
-  [recallFrom, recallTo].forEach(el => el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); loadRecalls(); } }));
+  [recallFrom, recallTo].forEach(el => {
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); loadRecalls(); } });
+    el.addEventListener("input", () => recallSkipped.clear());   // new dates, fresh start
+  });
+  $("recall-check-all").addEventListener("click", () => setAllRecalls(true));
+  $("recall-check-none").addEventListener("click", () => setAllRecalls(false));
+  function setAllRecalls(on) {
+    recallSkipped.clear();
+    if (!on) recallRows.forEach(r => recallSkipped.add(r.patient_id));
+    document.querySelectorAll("#recall-results .recitem").forEach((item, i) => {
+      item.querySelector("input").checked = on;
+      item.classList.toggle("skip", !on);
+    });
+    refreshRecallSummary();
+  }
 
-  // The office copy: a plain list to keep, on full pages.
+  // The office copy: only the patients still checked, on full pages.
   $("recall-print-list").addEventListener("click", () => {
-    const a = readDate(recallFrom), b = readDate(recallTo);
-    const rows = recallRows.map(r =>
+    const picked = recallPicked();
+    const rows = picked.map(r =>
       "<tr><td>" + esc(fmtDate(r.recall_date)) + "</td><td><b>" + esc([r.last_name, r.first_name].filter(Boolean).join(", ")) + "</b></td><td>" +
       (hasMailingAddress(r) ? esc([r.address, recallCity(r)].filter(Boolean).join(", ")) : "<i>no address</i>") + "</td><td>" +
       esc(recallPhone(r)) + "</td><td>" + esc(fmtDate(r.last_visit)) + "</td></tr>").join("");
-    $("print-sheet").innerHTML = '<div class="rl"><h3>Recalls due ' + esc(fmtDate(a)) + " to " + esc(fmtDate(b)) +
-      " (" + recallRows.length + ")</h3><table><thead><tr><th>Recall date</th><th>Name</th><th>Address</th><th>Phone</th><th>Last visit</th></tr></thead><tbody>" +
+    $("print-sheet").innerHTML = '<div class="rl"><h3>Recalls due ' + esc(fmtDate(recallRange.a)) + " to " + esc(fmtDate(recallRange.b)) +
+      " (" + picked.length + ")</h3><table><thead><tr><th>Recall date</th><th>Name</th><th>Address</th><th>Phone</th><th>Last visit</th></tr></thead><tbody>" +
       rows + "</tbody></table></div>";
     window.print();
   });
