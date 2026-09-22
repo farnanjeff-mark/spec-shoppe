@@ -419,6 +419,7 @@
     <h3 class="findhead">Find by check box</h3>
     <p class="finds-sub">See every patient with a box checked.</p>
     <div class="finds" id="find-buttons"></div>
+    <p style="margin-top: 10px;"><button type="button" class="secondary" id="backup-btn">Download backup (Excel)</button> <span class="note" id="backup-note" style="display: inline; margin-left: 8px;"></span></p>
   </section>
 
   <!-- Find a patient -->
@@ -764,6 +765,7 @@
 <div id="print-sheet"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
   const SUPABASE_URL = "https://swyxttdbtzmqdlcothbs.supabase.co";
   const SUPABASE_KEY = "sb_publishable_e8JCEYPrhhMdIAkmuU6dFA_JM19OPSt";
@@ -2599,6 +2601,30 @@
     searchInput.value = "";
     resultsEl.innerHTML = "";
     show("login");
+  });
+
+  // Backup: one Excel workbook, one tab per table.
+  const BACKUP_TABLES = ["patients", "prescriptions", "orders", "counts", "lens_prices", "contact_lens_info", "vendors"];
+  $("backup-btn").addEventListener("click", async () => {
+    const btn = $("backup-btn"), note = $("backup-note");
+    btn.disabled = true;
+    note.textContent = "Gathering data...";
+    try {
+      const wb = XLSX.utils.book_new();
+      for (const t of BACKUP_TABLES) {
+        const { data, error } = await db.from(t).select("*");
+        if (error) throw new Error(t + ": " + error.message);
+        const sheet = XLSX.utils.json_to_sheet(data || []);
+        XLSX.utils.book_append_sheet(wb, sheet, t.slice(0, 31));
+      }
+      const stamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, "spec-shoppe-backup-" + stamp + ".xlsx");
+      note.textContent = "Downloaded.";
+    } catch (err) {
+      note.textContent = "Backup failed. Check the internet connection and try again.";
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   document.querySelectorAll("[data-go]").forEach(btn => {
