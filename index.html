@@ -68,8 +68,8 @@
   .rstatus { color: var(--muted); }
   .rstatus.ok { color: var(--green); font-weight: bold; }
   .rstatus.dirty { font-style: italic; }
-  .status { color: var(--muted); font-size: 11pt; margin: 0 0 18px; min-height: 1.4em; }
-  .status.ok { color: var(--green); }
+  .status { color: var(--muted); font-size: 11pt; margin: 0; min-height: 1.4em; }
+  .status.ok { color: var(--green); font-weight: bold; }
   .status.bad { color: var(--red); font-weight: bold; }
   fieldset { border: 1px solid var(--line); border-left: 6px solid var(--blue); border-radius: 3px; margin: 0 0 18px; padding: 12px 16px 16px; }
   fieldset.green { border-left-color: var(--green); }
@@ -81,20 +81,31 @@
   form.login button.primary { justify-self: start; }
 
   /* Menu */
-  .menu { display: grid; gap: 14px; margin: 0 0 28px; }
+  .menuhead { display: flex; align-items: center; justify-content: space-between; margin: 0 0 24px; flex-wrap: wrap; gap: 14px; }
+  .menuhead .status { margin: 0; }
+  .menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0 0 28px; }
   .menu button {
     text-align: left; background: var(--white); color: var(--ink);
-    border: 1px solid var(--line); border-left: 8px solid var(--blue);
-    border-radius: 3px; padding: 16px 18px;
-    display: grid; gap: 2px; width: 100%;
+    border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   }
-  .menu button strong { font-size: 14pt; }
-  .menu button span { color: var(--muted); font-size: 11pt; }
-  .menu button.counts { border-left-color: var(--green); }
-  .menu button:hover { background: #f5f8fc; }
-  .menu button.counts:hover { background: #f4f9f5; }
-  .menu button.vendors { border-left-color: var(--red); }
-  .menu button.vendors:hover { background: #fbf3f2; }
+  .menu button:hover { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.06); }
+  .menu .micon { width: 38px; height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(29, 79, 145, 0.1); }
+  .menu button.counts .micon { background: rgba(47, 111, 62, 0.1); }
+  .menu button.vendors .micon { background: rgba(143, 42, 34, 0.1); }
+  .menu button strong { font-size: 13pt; display: block; }
+  .menu button .mtext span { color: var(--muted); font-size: 10.5pt; display: block; margin-top: 2px; }
+  .findhead { font-size: 13pt; margin: 0 0 3px; }
+  .finds-sub { color: var(--muted); font-size: 10.5pt; margin: 0 0 12px; }
+  .finds { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 28px; }
+  .finds button {
+    background: var(--white); color: var(--green); font-weight: bold;
+    border: 1px solid var(--green); border-radius: 999px; padding: 8px 16px; font-size: 10.5pt;
+  }
+  .finds button.claim { border-color: var(--blue); color: var(--blue); }
+  .finds button:hover { background: var(--green); color: var(--white); }
+  .finds button.claim:hover { background: var(--blue); color: var(--white); }
 
   /* Lens price sheet */
   .lensline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
@@ -170,17 +181,6 @@
   .vgrid .wide { grid-column: 1 / -1; }
   .vcsz { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.5fr) minmax(0, 0.9fr); gap: 16px; }
   @media (max-width: 560px) { .vgrid { grid-template-columns: 1fr; } }
-
-  /* Find by check box */
-  .findhead { font-size: 13pt; margin: 0 0 8px; }
-  .finds { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin: 0 0 28px; }
-  .finds button {
-    text-align: left; background: var(--white); color: var(--ink); font-weight: bold;
-    border: 1px solid var(--line); border-left: 6px solid var(--green); border-radius: 3px; padding: 9px 12px;
-  }
-  .finds button.claim { border-left-color: var(--blue); }
-  .finds button:hover { background: #f4f9f5; }
-  .finds button.claim:hover { background: #f5f8fc; }
 
   /* Search */
   .searchrow { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; margin-bottom: 14px; }
@@ -298,7 +298,7 @@
   /* Rounded corners and soft shadows (option A: subtle) */
   :root { --r: 6px; --ri: 3px; --shadow: 0 1px 3px rgba(0, 0, 0, 0.14); --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.18); }
   header.bar { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28); }
-  .menu button, .finds button, .results button, .visitlist button, .visitlist .vnew, .panel { border-radius: var(--r); box-shadow: var(--shadow); }
+  .results button, .visitlist button, .visitlist .vnew, .panel { border-radius: var(--r); box-shadow: var(--shadow); }
   fieldset { border-radius: var(--r); box-shadow: var(--shadow); }
   .cgroup { border-radius: var(--r); }
   button.primary, button.secondary, button.signout { border-radius: 4px; box-shadow: var(--shadow-btn); }
@@ -385,30 +385,31 @@
 
   <!-- Main menu -->
   <section id="view-menu" class="hidden">
-    <h2>Main menu</h2>
-    <p class="status" id="status">Checking the database...</p>
+    <div class="menuhead">
+      <p class="status" id="status">Checking the database...</p>
+      <button type="button" class="signout" id="signout-btn">Sign out</button>
+    </div>
     <div class="menu">
       <button type="button" data-go="patients">
-        <strong>Find or add a patient</strong>
-        <span>Search by name or birthday, or start a new record.</span>
+        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4f91" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <span class="mtext"><strong>Find or add a patient</strong><span>Search by name or birthday, or start a new record.</span></span>
       </button>
       <button type="button" class="counts" data-go="counts">
-        <strong>Daily counts</strong>
-        <span>Pick a date and see that day's total.</span>
+        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f6f3e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 15l2.3 2.3L16 12.5"/></svg></span>
+        <span class="mtext"><strong>Daily counts</strong><span>Pick a date and see that day's total.</span></span>
       </button>
       <button type="button" class="recalls" data-go="recalls">
-        <strong>Recalls</strong>
-        <span>See who is due for a recall card between two dates.</span>
+        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4f91" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+        <span class="mtext"><strong>Recalls</strong><span>See who is due for a recall card between two dates.</span></span>
       </button>
       <button type="button" class="vendors" data-go="vendors">
-        <strong>Vendors</strong>
-        <span>Search your vendor list, or add and edit a vendor.</span>
+        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8f2a22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span>
+        <span class="mtext"><strong>Vendors</strong><span>Search your vendor list, or add and edit a vendor.</span></span>
       </button>
     </div>
     <h3 class="findhead">Find by check box</h3>
+    <p class="finds-sub">See every patient with a box checked.</p>
     <div class="finds" id="find-buttons"></div>
-
-    <button type="button" class="signout" id="signout-btn">Sign out</button>
   </section>
 
   <!-- Find a patient -->
@@ -1761,7 +1762,8 @@
     const b = document.createElement("button");
     b.type = "button";
     if (f.cls) b.className = f.cls;
-    b.textContent = f.button;
+    b.textContent = f.label;
+    b.setAttribute("aria-label", f.button);
     b.addEventListener("click", () => openChecked(f));
     $("find-buttons").appendChild(b);
   });
