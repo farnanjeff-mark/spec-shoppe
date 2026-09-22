@@ -349,6 +349,16 @@
     #print-sheet .slip .sname { font-size: 13pt; font-weight: bold; }
     #print-sheet .slip .sh { font-weight: bold; margin: 8pt 0 3pt; }
     #print-sheet .slip th, #print-sheet .slip td { font-size: 10pt; padding: 3pt 4pt; }
+    @page postcards { size: letter landscape; margin: 0; }
+    #print-sheet .postcards-page { page: postcards; width: 11in; height: 8.5in; page-break-after: always; }
+    #print-sheet .postcards-page:last-child { page-break-after: auto; }
+    #print-sheet .pc-grid { display: grid; grid-template-columns: 5.5in 5.5in; grid-template-rows: 4.25in 4.25in; width: 11in; height: 8.5in; }
+    #print-sheet .pc-card { box-sizing: border-box; padding: 0.35in; position: relative; font-size: 10pt; }
+    #print-sheet .pc-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    #print-sheet .pc-return { font-size: 9.5pt; line-height: 1.4; color: #333; }
+    #print-sheet .pc-stamp { width: 0.7in; height: 0.7in; border: 0.75pt dashed #999; color: #999; font-size: 7pt; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; }
+    #print-sheet .pc-msg { font-size: 12.5pt; line-height: 1.4; margin-top: 0.3in; max-width: 3.3in; }
+    #print-sheet .pc-addr { font-size: 11pt; line-height: 1.5; position: absolute; right: 0.35in; bottom: 0.35in; text-align: left; max-width: 2.6in; }
     #print-sheet .slip td.lab { width: 40pt; }
   }
 
@@ -600,6 +610,7 @@
       <label>To <input type="text" id="recall-to" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
       <button type="button" class="primary" id="recall-show">Show</button>
       <button type="button" class="secondary" id="recall-print-list" disabled>Print list</button>
+      <button type="button" class="secondary" id="recall-print-cards" disabled>Print postcards</button>
     </div>
     <p class="note" id="recall-note">Type the two dates as six digits, like 01/01/27, then click Show.</p>
     <div class="rectools hidden" id="recall-tools">
@@ -2243,6 +2254,7 @@
       : recallRows.length + (recallRows.length === 1 ? " patient is" : " patients are") + " due from " + fmtDate(a) + " to " + fmtDate(b) + ". " +
         picked.length + " checked to print." + (missing ? " " + missing + " of those " + (missing === 1 ? "has" : "have") + " no mailing address." : ""));
     $("recall-print-list").disabled = picked.length === 0;
+    $("recall-print-cards").disabled = picked.length === 0;
     $("recall-tools").classList.toggle("hidden", recallRows.length === 0);
   }
 
@@ -2252,6 +2264,7 @@
     const a = readDate(recallFrom), b = readDate(recallTo);
     recallRows = []; recallRange = null;
     $("recall-print-list").disabled = true;
+    $("recall-print-cards").disabled = true;
     $("recall-tools").classList.add("hidden");
     if (a === null || b === null) { box.innerHTML = ""; recallNote("Enter dates as six digits, like 01/02/27.", true); return; }
     if (!a || !b) { box.innerHTML = ""; recallNote("Enter a From date and a To date."); return; }
@@ -2319,6 +2332,34 @@
     $("print-sheet").innerHTML = '<div class="rl"><h3>Recalls due ' + esc(fmtDate(recallRange.a)) + " to " + esc(fmtDate(recallRange.b)) +
       " (" + picked.length + ")</h3><table><thead><tr><th>Recall date</th><th>Name</th><th>Address</th><th>Phone</th><th>Last visit</th></tr></thead><tbody>" +
       rows + "</tbody></table></div>";
+    window.print();
+  });
+
+  // Postcards: Avery 8387, 4.25in x 5.5in, 4 per letter sheet (2 cols x 2 rows), no page margin.
+  const POSTCARD_MESSAGE = "Our records indicate it's time for your eye exam. Please call us at your earliest convenience to schedule an appointment.";
+  $("recall-print-cards").addEventListener("click", () => {
+    const picked = recallPicked();
+    const eligible = picked.filter(hasMailingAddress);
+    const skipped = picked.length - eligible.length;
+    if (!eligible.length) { alert("None of the checked patients have a mailing address, so there's nothing to print."); return; }
+    if (skipped) alert(skipped + " " + (skipped === 1 ? "patient has" : "patients have") + " no mailing address and will be skipped.");
+    const cardHtml = (r) => !r ? '<div class="pc-card pc-blank"></div>' :
+      '<div class="pc-card">' +
+        '<div class="pc-top">' +
+          '<div class="pc-return">' + esc(SHOP_NAME) + "<br>" + SHOP_ADDRESS.map(esc).join("<br>") + "</div>" +
+          '<div class="pc-stamp">STAMP</div>' +
+        "</div>" +
+        '<div class="pc-msg">' + esc(POSTCARD_MESSAGE) + '<br><br><b>' + esc(SHOP_ADDRESS[SHOP_ADDRESS.length - 1]) + "</b></div>" +
+        '<div class="pc-addr"><b>' + esc([r.first_name, r.last_name].filter(Boolean).join(" ")) + "</b><br>" +
+          esc(r.address) + "<br>" + esc(recallCity(r)) + "</div>" +
+      "</div>";
+    const pages = [];
+    for (let i = 0; i < eligible.length; i += 4) pages.push(eligible.slice(i, i + 4));
+    $("print-sheet").innerHTML = pages.map(group => {
+      const cells = group.slice();
+      while (cells.length < 4) cells.push(null);
+      return '<div class="postcards-page"><div class="pc-grid">' + cells.map(cardHtml).join("") + "</div></div>";
+    }).join("");
     window.print();
   });
 
