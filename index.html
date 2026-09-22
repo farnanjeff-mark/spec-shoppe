@@ -359,6 +359,20 @@
     #print-sheet .pc-stamp { width: 0.7in; height: 0.7in; border: 0.75pt dashed #999; color: #999; font-size: 7pt; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; }
     #print-sheet .pc-msg { font-size: 12.5pt; line-height: 1.4; margin-top: 0.3in; max-width: 3.3in; }
     #print-sheet .pc-addr { font-size: 11pt; line-height: 1.5; position: absolute; right: 0.35in; bottom: 0.35in; text-align: left; max-width: 2.6in; }
+    #print-sheet .receipt { padding-top: 0.3in; }
+    #print-sheet .receipt .rhead { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5pt solid #8f2a22; padding-bottom: 8pt; margin-bottom: 12pt; }
+    #print-sheet .receipt .rshop { font-size: 13pt; font-weight: bold; }
+    #print-sheet .receipt .rshopaddr { font-size: 9pt; color: #555; margin-top: 2pt; }
+    #print-sheet .receipt .rtitle { font-size: 16pt; font-weight: bold; color: #8f2a22; letter-spacing: .04em; text-align: right; }
+    #print-sheet .receipt .rdate { font-size: 10pt; margin-top: 3pt; text-align: right; }
+    #print-sheet .receipt .rpatient { font-size: 12pt; margin-bottom: 12pt; }
+    #print-sheet .receipt .rpatient .raddr { font-size: 10pt; color: #555; }
+    #print-sheet .receipt table { width: 100%; border-collapse: collapse; }
+    #print-sheet .receipt th, #print-sheet .receipt td { border: 0.75pt solid #888; padding: 4pt 7pt; font-size: 10pt; text-align: left; }
+    #print-sheet .receipt th { background: #f4f4f4; font-size: 8pt; text-transform: uppercase; letter-spacing: .03em; color: #555; }
+    #print-sheet .receipt td.amt, #print-sheet .receipt th.amt { text-align: right; }
+    #print-sheet .receipt .rtotal { display: flex; justify-content: flex-end; margin-top: 2pt; }
+    #print-sheet .receipt .rtotal div { width: 2.4in; display: flex; justify-content: space-between; padding: 6pt 7pt; border: 0.75pt solid #888; border-top: none; background: #f4f4f4; font-weight: bold; font-size: 11pt; }
     #print-sheet .slip td.lab { width: 40pt; }
   }
 
@@ -444,6 +458,9 @@
         <div class="vwho"><strong id="r-title">New patient</strong></div>
         <div class="vbtns">
           <button type="button" class="secondary" id="r-back-btn">Main menu</button>
+          <button type="button" class="secondary" id="print-btn">Print record</button>
+          <button type="button" class="secondary" id="print-rx-btn">Print Rx</button>
+          <button type="button" class="secondary" id="receipt-btn">Receipt</button>
           <span class="rstatus" id="r-status" role="status"></span>
           <span class="error" id="r-error" role="alert"></span>
         </div>
@@ -529,8 +546,6 @@
             </div>
             <div class="visitbtns">
               <button type="button" class="primary" id="rx-new">New visit</button>
-              <button type="button" class="secondary" id="print-btn">Print record</button>
-              <button type="button" class="secondary" id="print-rx-btn">Print Rx</button>
               <button type="button" class="secondary" id="claim-btn">Claim info</button>
             </div>
             <div class="visitlist" id="visit-list"></div>
@@ -757,6 +772,22 @@
       <div class="countbtns">
         <button type="button" class="primary" id="claim-ok">Save</button>
         <button type="button" class="secondary" id="claim-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="receipt-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Print receipt">
+  <div class="modalbox countbox">
+    <div class="modalhead"><h2>Print receipt</h2></div>
+    <div class="modalscroll">
+      <div class="countchecks">
+        <label class="codebox">Date <input type="text" id="receipt-date" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+      </div>
+      <p class="error" id="receipt-error" role="alert"></p>
+      <div class="countbtns">
+        <button type="button" class="primary" id="receipt-ok">Print</button>
+        <button type="button" class="secondary" id="receipt-cancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -1556,6 +1587,67 @@
   $("print-rx-btn").addEventListener("click", async () => {
     if (!(await ensureSaved("print"))) return;
     $("print-sheet").innerHTML = buildRxSheet();
+    window.print();
+  });
+
+  // Receipt: prints everything (visit charges and/or order lines) dated on the day entered.
+  function buildReceiptSheet(dateISO) {
+    const val = (el) => el.value.trim();
+    const name = esc([val(pin.first_name), val(pin.last_name)].filter(Boolean).join(" "));
+    const cityLine = [val(pin.city), [val(pin.state), val(pin.zip_code)].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    const addr = esc([val(pin.address), cityLine].filter(Boolean).join(", "));
+    const items = [];   // { date, desc, amount }
+    const CHARGE_LABELS = { frame_chg: "Frame", misc_chg: "Misc", lens_chg: "Lens", contacts_chg: "Contacts" };
+    if (readDate(vin.service_date) === dateISO) {
+      V_TAXABLE.forEach(k => {
+        const n = Number(vin[k].value);
+        if (n) items.push({ date: dateISO, desc: CHARGE_LABELS[k], amount: n });
+      });
+      const exam = Number(vin.exam.value);
+      if (exam) items.push({ date: dateISO, desc: "Vision exam", amount: exam });
+      const disc = Number(vin.discount.value);
+      if (disc) items.push({ date: dateISO, desc: "Discount", amount: -disc });
+      const tax = Number(vin.tax.value);
+      if (tax) items.push({ date: dateISO, desc: "Sales tax", amount: tax });
+    }
+    orderRows.forEach(row => {
+      if (readDate(row.date) === dateISO && row.total.value.trim() !== "") {
+        const amt = Number(row.total.value);
+        if (!Number.isNaN(amt)) items.push({ date: dateISO, desc: row.note.value.trim() || "Order", amount: amt });
+      }
+    });
+    if (!items.length) return null;
+    const total = items.reduce((s, it) => s + it.amount, 0);
+    const moneyCell = (n) => (n < 0 ? "\u2212$" + Math.abs(n).toFixed(2) : "$" + n.toFixed(2));
+    const rows = items.map(it => "<tr><td>" + esc(fmtDate(it.date)) + "</td><td>" + esc(it.desc) + '</td><td class="amt">' + moneyCell(it.amount) + "</td></tr>").join("");
+    return '<div class="receipt">' +
+      '<div class="rhead"><div><div class="rshop">' + esc(SHOP_NAME) + '</div><div class="rshopaddr">' + SHOP_ADDRESS.map(esc).join("<br>") + "</div></div>" +
+        '<div><div class="rtitle">RECEIPT</div><div class="rdate">Date: <b>' + esc(fmtDate(dateISO)) + "</b></div></div></div>" +
+      '<div class="rpatient"><div><b>' + name + "</b></div><div class=\"raddr\">" + addr + "</div></div>" +
+      '<table><thead><tr><th>Date</th><th>Description</th><th class="amt">Amount</th></tr></thead><tbody>' + rows + "</tbody></table>" +
+      '<div class="rtotal"><div><span>Total</span><span>' + moneyCell(total) + "</span></div></div>" +
+      "</div>";
+  }
+  $("receipt-btn").addEventListener("click", async () => {
+    if (!(await ensureSaved())) return;
+    $("receipt-error").textContent = "";
+    setDate($("receipt-date"), todayISO());
+    $("receipt-modal").classList.remove("hidden");
+    $("receipt-date").focus();
+  });
+  $("receipt-cancel").addEventListener("click", () => $("receipt-modal").classList.add("hidden"));
+  $("receipt-modal").onkeydown = (e) => {
+    if (e.key === "Escape") { $("receipt-modal").classList.add("hidden"); return; }
+    if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); $("receipt-ok").click(); }
+  };
+  $("receipt-ok").addEventListener("click", () => {
+    const d = readDate($("receipt-date"));
+    if (d === null) { $("receipt-error").textContent = "Enter the date as six digits, like 01/02/27."; return; }
+    if (!d) { $("receipt-error").textContent = "Enter a date."; return; }
+    const html = buildReceiptSheet(d);
+    if (!html) { $("receipt-error").textContent = "Nothing happened on that date for this visit."; return; }
+    $("receipt-modal").classList.add("hidden");
+    $("print-sheet").innerHTML = html;
     window.print();
   });
 
