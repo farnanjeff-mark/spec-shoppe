@@ -129,6 +129,9 @@
   .countbox fieldset { margin: 0 0 10px; }
   .countchecks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; padding: 4px 2px; }
   .qtybox { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: normal; }
+  .codebox { display: flex; align-items: center; gap: 6px; font-weight: normal; }
+  .codebox input { width: 90px; padding: 6px 8px; font-size: 11pt; }
+  #claim-cpt-items input { width: 90px; padding: 6px 8px; font-size: 11pt; }
   .countchecks .qtybox { font-size: 12pt; }
   .qtybox input { width: 46px; text-align: center; padding: 4px 2px; }
   .countbtns { display: flex; gap: 10px; margin-top: 8px; }
@@ -328,7 +331,7 @@
     #print-sheet td.plab { background: #eee; font-weight: bold; width: 46pt; }
     #print-sheet .row { display: flex; gap: 8pt; margin-top: 5pt; }
     #print-sheet .h { font-weight: bold; font-size: 9pt; margin: 0 0 2pt; }
-    #print-sheet .notes { border: 0.6pt solid #888; padding: 2pt 3pt; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 8.5pt; }
+    #print-sheet .notes { border: 0.6pt solid #888; padding: 2pt 3pt; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     #print-sheet .rl h3 { font-size: 13pt; margin: 0 0 6pt; }
     #print-sheet .rl table { border-collapse: collapse; width: 100%; }
     #print-sheet .rl th, #print-sheet .rl td { border: 0.6pt solid #888; padding: 3pt 4pt; text-align: left; font-size: 9.5pt; }
@@ -517,6 +520,7 @@
               <button type="button" class="primary" id="rx-new">New visit</button>
               <button type="button" class="secondary" id="print-btn">Print record</button>
               <button type="button" class="secondary" id="print-rx-btn">Print Rx</button>
+              <button type="button" class="secondary" id="claim-btn">Claim info</button>
             </div>
             <div class="visitlist" id="visit-list"></div>
           </div>
@@ -704,6 +708,43 @@
       <div class="countbtns">
         <button type="button" class="primary" id="count-ok">OK, print</button>
         <button type="button" class="secondary" id="count-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="claim-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Insurance claim info">
+  <div class="modalbox countbox">
+    <div class="modalhead"><h2>Insurance claim info</h2><span id="claim-who" class="note"></span></div>
+    <div class="modalscroll">
+      <fieldset>
+        <legend>Patient</legend>
+        <div class="countchecks">
+          <label class="qtybox">Sex
+            <select id="claim-sex">
+              <option value="">&mdash;</option>
+              <option value="M">M</option>
+              <option value="F">F</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Diagnosis codes (ICD)</legend>
+        <div class="countchecks">
+          <label class="codebox">1 <input type="text" id="claim-dx1" autocomplete="off"></label>
+          <label class="codebox">2 <input type="text" id="claim-dx2" autocomplete="off"></label>
+          <label class="codebox">3 <input type="text" id="claim-dx3" autocomplete="off"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Procedure codes (CPT)</legend>
+        <div id="claim-cpt-items"></div>
+      </fieldset>
+      <p class="error" id="claim-error" role="alert"></p>
+      <div class="countbtns">
+        <button type="button" class="primary" id="claim-ok">Save</button>
+        <button type="button" class="secondary" id="claim-cancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -1517,6 +1558,84 @@
       checkDatabase();
     });
     window.print();
+  });
+
+  /* ---------- Insurance claim info popup (sex, ICD/CPT codes; entered separately, in a batch, before printing a claim) ---------- */
+  const claimModal = $("claim-modal");
+  $("claim-btn").addEventListener("click", async () => {
+    if (!(await ensureSaved())) return;
+    if (rxIndex < 0 || !rxRows[rxIndex]) {
+      alert("Save or open a visit first, then enter claim info for it.");
+      return;
+    }
+    const rx = rxRows[rxIndex];
+    const { data: ord, error } = await db.from("orders").select("order_id,nb_date,nb_note,cpt_code")
+      .eq("prescription_id", rx.prescription_id).order("order_id");
+    if (error) {
+      alert("Couldn't load the order lines. Check the internet connection and try again.");
+      return;
+    }
+    $("claim-who").textContent = [pin.first_name.value.trim(), pin.last_name.value.trim()].filter(Boolean).join(" ") +
+      (rx.service_date ? " \u2014 " + fmtDate(rx.service_date) : "");
+    $("claim-sex").value = (patientRec && patientRec.sex) || "";
+    $("claim-dx1").value = rx.dx1 || "";
+    $("claim-dx2").value = rx.dx2 || "";
+    $("claim-dx3").value = rx.dx3 || "";
+    const box = $("claim-cpt-items");
+    box.innerHTML = "";
+    if (!ord.length) {
+      box.innerHTML = '<p class="note">No order lines on this visit yet.</p>';
+    } else {
+      ord.forEach(o => {
+        const lab = document.createElement("label");
+        lab.className = "qtybox";
+        const span = document.createElement("span");
+        span.textContent = [fmtDate(o.nb_date), o.nb_note].filter(Boolean).join(" \u2014 ") || "Order line";
+        const inp = document.createElement("input");
+        inp.type = "text"; inp.dataset.orderId = o.order_id; inp.value = o.cpt_code || ""; inp.autocomplete = "off";
+        lab.appendChild(span); lab.appendChild(inp);
+        box.appendChild(lab);
+      });
+    }
+    $("claim-error").textContent = "";
+    claimModal.classList.remove("hidden");
+    $("claim-sex").focus();
+  });
+
+  $("claim-cancel").addEventListener("click", () => claimModal.classList.add("hidden"));
+  claimModal.onkeydown = (e) => {
+    if (e.key === "Escape") { claimModal.classList.add("hidden"); return; }
+    if (e.key === "Enter" && (e.target.tagName === "INPUT" || e.target.tagName === "SELECT")) {
+      e.preventDefault();
+      const focusables = Array.from(claimModal.querySelectorAll("input, select"));
+      const idx = focusables.indexOf(e.target);
+      if (idx > -1 && idx < focusables.length - 1) focusables[idx + 1].focus();
+      else $("claim-ok").click();
+    }
+  };
+  $("claim-ok").addEventListener("click", async () => {
+    $("claim-ok").disabled = true;
+    $("claim-error").textContent = "";
+    const rx = rxRows[rxIndex];
+    const sex = $("claim-sex").value || null;
+    const dx1 = $("claim-dx1").value.trim() || null;
+    const dx2 = $("claim-dx2").value.trim() || null;
+    const dx3 = $("claim-dx3").value.trim() || null;
+    const cptInputs = Array.from($("claim-cpt-items").querySelectorAll("input"));
+    const tasks = [
+      db.from("patients").update({ sex }).eq("patient_id", patientId),
+      db.from("prescriptions").update({ dx1, dx2, dx3 }).eq("prescription_id", rx.prescription_id),
+      ...cptInputs.map(inp => db.from("orders").update({ cpt_code: inp.value.trim() || null }).eq("order_id", Number(inp.dataset.orderId)))
+    ];
+    const results = await Promise.all(tasks);
+    $("claim-ok").disabled = false;
+    if (results.some(r => r.error)) {
+      $("claim-error").textContent = "Some of that didn't save. Check the internet connection and try again.";
+      return;
+    }
+    if (patientRec) patientRec.sex = sex;
+    rx.dx1 = dx1; rx.dx2 = dx2; rx.dx3 = dx3;
+    claimModal.classList.add("hidden");
   });
 
   /* ---------- Search ---------- */
