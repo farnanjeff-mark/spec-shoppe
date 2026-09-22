@@ -83,7 +83,7 @@
   /* Menu */
   .menuhead { display: flex; align-items: center; justify-content: space-between; margin: 0 0 24px; flex-wrap: wrap; gap: 14px; }
   .menuhead .status { margin: 0; }
-  .menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0 0 28px; }
+  .menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 28px; }
   .menu button {
     text-align: left; background: var(--white); color: var(--ink);
     border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
@@ -98,14 +98,13 @@
   .menu button .mtext span { color: var(--muted); font-size: 10.5pt; display: block; margin-top: 2px; }
   .findhead { font-size: 13pt; margin: 0 0 3px; }
   .finds-sub { color: var(--muted); font-size: 10.5pt; margin: 0 0 12px; }
-  .finds { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 28px; }
+  .finds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 28px; }
+  .finds button { text-align: center; }
   .finds button {
-    background: var(--white); color: var(--green); font-weight: bold;
-    border: 1px solid var(--green); border-radius: 999px; padding: 8px 16px; font-size: 10.5pt;
+    background: var(--white); color: var(--blue); font-weight: bold;
+    border: 1px solid var(--blue); border-radius: 999px; padding: 8px 16px; font-size: 10.5pt;
   }
-  .finds button.claim { border-color: var(--blue); color: var(--blue); }
-  .finds button:hover { background: var(--green); color: var(--white); }
-  .finds button.claim:hover { background: var(--blue); color: var(--white); }
+  .finds button:hover { background: var(--blue); color: var(--white); }
 
   /* Lens price sheet */
   .lensline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
@@ -392,19 +391,19 @@
     <div class="menu">
       <button type="button" data-go="patients">
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4f91" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-        <span class="mtext"><strong>Find or add a patient</strong><span>Search by name or birthday, or start a new record.</span></span>
+        <span class="mtext"><strong>Find or add a patient</strong></span>
       </button>
       <button type="button" class="counts" data-go="counts">
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f6f3e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 15l2.3 2.3L16 12.5"/></svg></span>
-        <span class="mtext"><strong>Daily counts</strong><span>Pick a date and see that day's total.</span></span>
+        <span class="mtext"><strong>Daily counts</strong></span>
       </button>
       <button type="button" class="recalls" data-go="recalls">
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4f91" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
-        <span class="mtext"><strong>Recalls</strong><span>See who is due for a recall card between two dates.</span></span>
+        <span class="mtext"><strong>Recalls</strong></span>
       </button>
       <button type="button" class="vendors" data-go="vendors">
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8f2a22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span>
-        <span class="mtext"><strong>Vendors</strong><span>Search your vendor list, or add and edit a vendor.</span></span>
+        <span class="mtext"><strong>Vendors</strong></span>
       </button>
     </div>
     <h3 class="findhead">Find by check box</h3>
