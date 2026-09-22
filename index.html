@@ -328,8 +328,7 @@
     #print-sheet td.plab { background: #eee; font-weight: bold; width: 46pt; }
     #print-sheet .row { display: flex; gap: 8pt; margin-top: 5pt; }
     #print-sheet .h { font-weight: bold; font-size: 9pt; margin: 0 0 2pt; }
-    #print-sheet .notes { border: 0.6pt solid #888; height: 46pt; padding: 2pt 3pt; overflow: hidden; white-space: pre-wrap; }
-    #print-sheet .det span { margin-right: 10pt; }
+    #print-sheet .notes { border: 0.6pt solid #888; padding: 2pt 3pt; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 8.5pt; }
     #print-sheet .rl h3 { font-size: 13pt; margin: 0 0 6pt; }
     #print-sheet .rl table { border-collapse: collapse; width: 100%; }
     #print-sheet .rl th, #print-sheet .rl td { border: 0.6pt solid #888; padding: 3pt 4pt; text-align: left; font-size: 9.5pt; }
@@ -1449,14 +1448,15 @@
         '<div style="flex:1"><div class="h">Contacts Rx</div>' + rxTable(CONTACT_HEAD, CONTACT_ROWS, [0]) + "</div></div>" +
       '<div class="row">' +
         '<div style="flex:1.45" class="det"><div class="h">Details</div>' +
-          '<span><span class="k">Lens</span> ' + esc(val(vin.lens_type)) + '</span><span><span class="k">Misc</span> ' + esc(val(vin.misc)) +
-          '</span><span><span class="k">Frame</span> ' + esc(val(vin.frame)) + "</span>" +
-          '<div class="h" style="margin-top:4pt">Notes</div><div class="notes">' + esc(vin.notes.value) + "</div></div>" +
+          '<table><tr><td class="l plab">Lens</td><td class="l">' + esc(val(vin.lens_type)) + '</td></tr>' +
+          '<tr><td class="l plab">Misc</td><td class="l">' + esc(val(vin.misc)) + '</td></tr>' +
+          '<tr><td class="l plab">Frame</td><td class="l">' + esc(val(vin.frame)) + '</td></tr></table></div>' +
         '<div style="flex:1"><div class="h">Pricing</div><table style="table-layout:fixed"><colgroup><col style="width:30%"><col style="width:20%"><col style="width:30%"><col style="width:20%"></colgroup>' +
           "<tr>" + price("Lens", "lens_chg") + price("Exam", "exam") + "</tr>" +
           "<tr>" + price("Misc", "misc_chg") + price("Discount", "discount") + "</tr>" +
           "<tr>" + price("Frame", "frame_chg") + price("Tax", "tax") + "</tr>" +
           "<tr>" + price("Contacts", "contacts_chg") + price("Total", "total", true) + "</tr></table></div></div>" +
+      '<div style="margin-top:4pt"><div class="h">Notes</div><div class="notes">' + esc(vin.notes.value) + "</div></div>" +
       '<div style="margin-top:5pt"><div class="h">Orders</div>' +
         '<table><tr><th class="l" style="width:48pt">Date</th><th class="l">Item</th><th style="width:48pt">Price</th><th style="width:44pt">Tax</th><th style="width:48pt">Total</th></tr>' +
         orders + "</table>" + more + "</div></div>";
