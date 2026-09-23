@@ -43,6 +43,7 @@
 
   /* Shared controls */
   label { display: grid; gap: 6px; font-weight: bold; color: var(--muted); }
+  .olive-label { color: #6B7043; }
   input[type=text], input[type=email], input[type=password], input[type=date], input[type=search], textarea {
     font: inherit; padding: 10px 12px; border: 1px solid #8a8a8a; border-radius: 3px;
     background: var(--white); color: var(--ink); width: 100%;
@@ -76,6 +77,7 @@
   fieldset.red { border-left-color: var(--red); }
   fieldset.rxbox { border-left-color: #6B7043; background: #f2f2ea; }
   fieldset.pricebox { border-left-color: #6B7043; background: #f2f2ea; }
+  fieldset.mustardbox { border-left-color: #B8860B; background: #f7f0e0; }
   legend { font-weight: bold; font-size: 13pt; padding: 0 6px; }
 
   /* Login */
@@ -237,12 +239,12 @@
   .tag.tg { background: #cfe6d4; color: var(--green); }
   .cgroup { padding: 4px 8px 6px; margin-bottom: 6px; }
   .cgroup.checkbox-ins, .cgroup.claim {
-    border: 1px solid var(--line); border-left: 5px solid #6B7043;
-    background: #f2f2ea; border-radius: 3px;
+    border: 1px solid var(--line); border-left: 5px solid #B8860B;
+    background: #f7f0e0; border-radius: 3px;
   }
   .cgroup.claim { margin-bottom: 0; }
   .cgtitle { font-weight: bold; margin: 0 0 3px; }
-  .cgroup.checkbox-ins .cgtitle, .cgroup.claim .cgtitle { color: #6B7043; }
+  .cgroup.checkbox-ins .cgtitle, .cgroup.claim .cgtitle { color: #8a6508; }
   .datefiled { max-width: 160px; margin-top: 2px; }
 
   /* Patient box: all three columns line up top and bottom, with the extra space spread evenly */
@@ -302,7 +304,7 @@
   }
 
   /* Rounded corners and soft shadows (option A: subtle) */
-  :root { --r: 6px; --ri: 3px; --shadow: 0 1px 3px rgba(0, 0, 0, 0.14); --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.18); }
+  :root { --r: 6px; --ri: 6px; --shadow: 0 1px 3px rgba(0, 0, 0, 0.14); --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.18); }
   header.bar { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28); }
   .results button, .visitlist button, .visitlist .vnew, .panel { border-radius: var(--r); box-shadow: var(--shadow); }
   fieldset { border-radius: var(--r); box-shadow: var(--shadow); }
@@ -313,7 +315,6 @@
     border-radius: var(--ri); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
   }
   .lrow .tag, .drow .tag { border-radius: var(--ri) 0 0 var(--ri); }
-  .lrow input, .drow input { border-radius: 0 var(--ri) var(--ri) 0; }
 
   /* Printed record: fits the top half of a letter sheet, so the sheet can be folded in half */
   #print-sheet { display: none; }
@@ -472,6 +473,7 @@
           <span class="error" id="r-error" role="alert"></span>
         </div>
       </div>
+      <p class="error" id="dup-warning" role="alert" style="display: none;"></p>
 
       <fieldset class="pbox" data-part="patient">
         <legend>Patient</legend>
@@ -480,8 +482,8 @@
           <div class="pcol">
             <div class="prow pc-id">
               <label>ID <input type="text" id="f_patient_id" readonly tabindex="-1"></label>
-              <label>Last name <input type="text" id="f_last_name" autocomplete="off"></label>
-              <label>First name <input type="text" id="f_first_name" autocomplete="off"></label>
+              <label><span class="olive-label">Last name</span> <input type="text" id="f_last_name" autocomplete="off"></label>
+              <label><span class="olive-label">First name</span> <input type="text" id="f_first_name" autocomplete="off"></label>
             </div>
             <div class="prow">
               <label>Address <input type="text" id="f_address" autocomplete="off"></label>
@@ -607,7 +609,7 @@
       </div>
 
       <div data-part="orders">
-        <fieldset class="green">
+        <fieldset class="pricebox">
           <legend>Orders</legend>
           <div class="ogrid" id="orders-grid">
             <div class="ohead">
@@ -955,6 +957,7 @@
 
   /* ---------- The record on screen ---------- */
   let patientId = null;     // null = new patient, not saved yet
+  let dupWarned = false;    // whether the duplicate-patient warning has already been shown for this new patient
   let patientRec = null;
   let rxRows = [];          // this patient's saved prescriptions, newest first
   let rxIndex = -1;         // position in rxRows, or -1 for a new, unsaved Rx
@@ -1197,6 +1200,7 @@
 
   function openNewRecord(prefillLast) {
     patientId = null; patientRec = null; rxRows = []; rxIndex = -1;
+    dupWarned = false; $("dup-warning").style.display = "none";
     fillPatient(null);
     if (prefillLast) pin.last_name.value = prefillLast;   // saved only once something else is typed
     showRx();
@@ -1207,6 +1211,25 @@
     pin.last_name.focus();
   }
 
+  // Warns once, on a brand-new (unsaved) patient, if another patient already has the same name.
+  async function checkDuplicatePatient() {
+    if (patientId !== null || dupWarned) return;
+    const last = pin.last_name.value.trim(), first = pin.first_name.value.trim();
+    if (!last || !first) return;
+    const { data, error } = await db.from("patients")
+      .select("patient_id,last_name,first_name,birthday,cell_phone,home_phone")
+      .ilike("last_name", last).ilike("first_name", first).limit(5);
+    if (error || !data || !data.length) return;
+    dupWarned = true;
+    const box = $("dup-warning");
+    const list = data.map(p => [p.last_name, p.first_name].filter(Boolean).join(", ") +
+      (p.birthday ? " (DOB " + fmtDate(p.birthday) + ")" : "") +
+      (p.cell_phone || p.home_phone ? " \u2014 " + (p.cell_phone || p.home_phone) : "")).join("; ");
+    box.textContent = "A patient with this name already exists: " + list + ". Search for them instead if this is the same person, or keep going if it's someone else.";
+    box.style.display = "block";
+  }
+  ["f_last_name", "f_first_name", "f_birthday"].forEach(id => $(id).addEventListener("blur", checkDuplicatePatient));
+
   async function openRecord(id) {
     const { data, error } = await db.from("patients").select("*").eq("patient_id", id).single();
     if (error) {
@@ -1215,6 +1238,7 @@
     }
     patientId = data.patient_id;
     patientRec = data;
+    dupWarned = true; $("dup-warning").style.display = "none";
     const rxErr = await loadRxRows();
     if (rxErr) {
       setNote("Couldn't load that patient's prescriptions. Check the internet connection and try again.", true);
