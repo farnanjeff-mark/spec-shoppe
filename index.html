@@ -1749,6 +1749,9 @@
 
   /* ---------- Insurance claim info popup (sex, ICD/CPT codes; entered separately, in a batch, before printing a claim) ---------- */
   const claimModal = $("claim-modal");
+  // Pricing box items that can go on the HCFA: [label, price column, CPT column]
+  const CLAIM_ITEMS = [["Exam", "exam", "cpt_exam"], ["Frame", "frame_chg", "cpt_frame"], ["Lens", "lens_chg", "cpt_lens"],
+    ["Tints/misc", "misc_chg", "cpt_misc"], ["Contacts", "contacts_chg", "cpt_contacts"]];
   $("claim-btn").addEventListener("click", async () => {
     if (!(await ensureSaved())) return;
     if (rxIndex < 0 || !rxRows[rxIndex]) {
@@ -1756,12 +1759,6 @@
       return;
     }
     const rx = rxRows[rxIndex];
-    const { data: ord, error } = await db.from("orders").select("order_id,nb_date,nb_note,cpt_code")
-      .eq("prescription_id", rx.prescription_id).order("order_id");
-    if (error) {
-      alert("Couldn't load the order lines. Check the internet connection and try again.");
-      return;
-    }
     $("claim-who").textContent = [pin.first_name.value.trim(), pin.last_name.value.trim()].filter(Boolean).join(" ") +
       (rx.service_date ? " \u2014 " + fmtDate(rx.service_date) : "");
     $("claim-sex").value = (patientRec && patientRec.sex) || "";
@@ -1770,20 +1767,16 @@
     $("claim-dx3").value = rx.dx3 || "";
     const box = $("claim-cpt-items");
     box.innerHTML = "";
-    if (!ord.length) {
-      box.innerHTML = '<p class="note">No order lines on this visit yet.</p>';
-    } else {
-      ord.forEach((o, i) => {
-        const lab = document.createElement("label");
-        lab.className = "qtybox";
-        const span = document.createElement("span");
-        span.textContent = "Line " + (i + 1);   // same order as the lines in the Orders box
-        const inp = document.createElement("input");
-        inp.type = "text"; inp.dataset.orderId = o.order_id; inp.value = o.cpt_code || ""; inp.autocomplete = "off";
-        lab.appendChild(span); lab.appendChild(inp);
-        box.appendChild(lab);
-      });
-    }
+    CLAIM_ITEMS.forEach(([label, priceCol, cptCol]) => {
+      const lab = document.createElement("label");
+      lab.className = "qtybox";
+      const span = document.createElement("span");
+      span.textContent = label + " ($" + (Number(rx[priceCol]) || 0).toFixed(2) + ")";
+      const inp = document.createElement("input");
+      inp.type = "text"; inp.dataset.col = cptCol; inp.value = rx[cptCol] || ""; inp.autocomplete = "off";
+      lab.appendChild(span); lab.appendChild(inp);
+      box.appendChild(lab);
+    });
     $("claim-error").textContent = "";
     claimModal.classList.remove("hidden");
     $("claim-sex").focus();
@@ -1807,11 +1800,11 @@
     const dx1 = $("claim-dx1").value.trim() || null;
     const dx2 = $("claim-dx2").value.trim() || null;
     const dx3 = $("claim-dx3").value.trim() || null;
-    const cptInputs = Array.from($("claim-cpt-items").querySelectorAll("input"));
+    const codes = {};
+    $("claim-cpt-items").querySelectorAll("input").forEach(inp => { codes[inp.dataset.col] = inp.value.trim().toUpperCase() || null; });
     const tasks = [
       db.from("patients").update({ sex }).eq("patient_id", patientId),
-      db.from("prescriptions").update({ dx1, dx2, dx3 }).eq("prescription_id", rx.prescription_id),
-      ...cptInputs.map(inp => db.from("orders").update({ cpt_code: inp.value.trim() || null }).eq("order_id", Number(inp.dataset.orderId)))
+      db.from("prescriptions").update(Object.assign({ dx1, dx2, dx3 }, codes)).eq("prescription_id", rx.prescription_id)
     ];
     const results = await Promise.all(tasks);
     if (results.some(r => r.error)) {
@@ -1820,6 +1813,7 @@
     }
     if (patientRec) patientRec.sex = sex;
     rx.dx1 = dx1; rx.dx2 = dx2; rx.dx3 = dx3;
+    Object.assign(rx, codes);
     return true;
   }
   $("claim-ok").addEventListener("click", async () => {
@@ -1875,11 +1869,7 @@
   async function readyClaim() {
     const ok = await saveClaim();
     if (!ok) return null;
-    const rx = rxRows[rxIndex];
-    const { data: ord, error } = await db.from("orders").select("order_id,nb_date,nb_price,cpt_code")
-      .eq("prescription_id", rx.prescription_id).order("order_id");
-    if (error) { $("claim-error").textContent = "Couldn't load the order lines. Check the internet connection and try again."; return null; }
-    return { p: patientRec || {}, rx, ord: ord || [] };
+    return { p: patientRec || {}, rx: rxRows[rxIndex] };
   }
 
   // The VSP form picture has to finish loading before the print window opens, or the form comes out blank.
@@ -1906,7 +1896,7 @@
   }
 
   function buildHCFA(kind, d) {
-    const { p, rx, ord } = d;
+    const { p, rx } = d;
     const s = [];
     // Box 1 and 1a
     if (kind === "medicare") { s.push(svgX(0.37, 1.54)); s.push(svgText(5.25, 1.61, up(p.medical_no))); }
@@ -1931,14 +1921,14 @@
     const dx = [rx.dx1, rx.dx2, rx.dx3].map(up);
     if (dx.some(Boolean)) s.push(svgText(4.45, 6.53, "0"));
     [0.615, 1.895, 3.205].forEach((x, i) => s.push(svgText(x, 6.615, dx[i])));
-    // Box 24: one line per order line that has a CPT code, six at most
-    const lines = ord.filter(o => t0(o.cpt_code));
+    // Box 24: one line per Pricing box item that has both a charge and a CPT code
+    const lines = CLAIM_ITEMS.filter(([, priceCol, cptCol]) => Number(rx[priceCol]) && t0(rx[cptCol]));
     let total = 0;
-    lines.slice(0, 6).forEach((o, i) => {
+    lines.forEach(([, priceCol, cptCol], i) => {
       const y = +(7.61 + i * 0.3333).toFixed(3);
-      total += Number(o.nb_price) || 0;
-      s.push(svgText(0.37, y, fmtDate(o.nb_date || rx.service_date)), svgText(2.085, y, "11"), svgText(2.74, y, up(o.cpt_code)),
-        svgText(4.795, y, "1"), svgText(5.36, y, "$" + money(o.nb_price)), svgText(7.045, y, BILLING.npi));
+      total += Number(rx[priceCol]) || 0;
+      s.push(svgText(0.37, y, fmtDate(rx.service_date)), svgText(2.085, y, "11"), svgText(2.74, y, up(rx[cptCol])),
+        svgText(4.795, y, "1"), svgText(5.36, y, "$" + money(rx[priceCol])), svgText(7.045, y, BILLING.npi));
     });
     // Box 25, 27, 28-30
     s.push(svgText(0.74, 9.565, BILLING.taxId), svgX(2.175, 9.55), svgX(4.09, 9.545));
@@ -1954,8 +1944,7 @@
     const d = await readyClaim();
     if (!d) return;
     const r = buildHCFA(kind, d);
-    if (!r.lines && !confirm("None of this visit's order lines has a CPT code, so box 24 will be empty. Print anyway?")) return;
-    if (r.lines > 6) alert("This visit has " + r.lines + " lines with CPT codes. Only the first 6 fit on one form.");
+    if (!r.lines && !confirm("No Pricing item has both a charge and a CPT code, so box 24 will be empty. Print anyway?")) return;
     claimModal.classList.add("hidden");
     printForm(r.svg);
   }
