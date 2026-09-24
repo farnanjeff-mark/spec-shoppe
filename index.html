@@ -1132,7 +1132,7 @@
       top.textContent = fmtDate(r.service_date) || "No date";
       const meta = document.createElement("span");
       meta.className = "vmeta";
-      meta.textContent = r.doctor || "";
+      meta.textContent = [r.doctor, r.office].filter(Boolean).join(" \u00b7 ");   // e.g. "GORMAN · Stanberry"
       b.appendChild(top); b.appendChild(meta);
       b.addEventListener("click", () => selectVisit(i));
       list.appendChild(b);
