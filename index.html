@@ -825,6 +825,17 @@
     <div class="modalscroll">
       <p class="note" id="vsp-msg" style="margin-top: 0;"></p>
       <div class="countchecks" id="vsp-rel"></div>
+      <p class="note" style="margin: 10px 0 4px;">Member details for this form only (not saved):</p>
+      <div class="countchecks">
+        <label class="codebox">Member birthday <input type="text" id="vsp-mdob" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off" data-kind="birth"></label>
+        <label class="qtybox">Member sex
+          <select id="vsp-msex">
+            <option value="">&mdash;</option>
+            <option value="M">M</option>
+            <option value="F">F</option>
+          </select>
+        </label>
+      </div>
       <p class="error" id="vsp-error" role="alert"></p>
       <div class="countbtns">
         <button type="button" class="primary" id="vsp-ok">Print</button>
@@ -1871,7 +1882,10 @@
     return { p: patientRec || {}, rx, ord: ord || [] };
   }
 
-  function printForm(svg) {
+  // The VSP form picture has to finish loading before the print window opens, or the form comes out blank.
+  const vspBgReady = (() => { const im = new Image(); im.src = VSP_BG; return im.decode().catch(() => {}); })();
+  async function printForm(svg) {
+    if (svg.indexOf(VSP_BG) >= 0) await vspBgReady;
     const st = document.createElement("style");
     st.id = "formpage-style";
     st.textContent = "@media print { @page { size: letter; margin: 0; } }";
@@ -1881,6 +1895,13 @@
       st.remove();
     });
     $("print-sheet").innerHTML = svg;
+    const imgs = Array.from($("print-sheet").querySelectorAll("image"));
+    await Promise.all(imgs.map(el => new Promise(res => {
+      el.addEventListener("load", res, { once: true });
+      el.addEventListener("error", res, { once: true });
+      setTimeout(res, 1500);
+    })));
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     window.print();
   }
 
@@ -2028,6 +2049,8 @@
       " How is the patient related to the member?";
     $("vsp-rel").innerHTML = VSP_REL.map(r =>
       '<label class="check"><input type="radio" name="vsp-rel" value="' + r[0] + '">' + r[0] + "</label>").join("");
+    setDate($("vsp-mdob"), member ? member.birthday : "");
+    $("vsp-msex").value = (member && member.sex) || "";
     $("vsp-error").textContent = "";
     $("vsp-modal").classList.remove("hidden");
   });
@@ -2035,8 +2058,17 @@
   $("vsp-ok").addEventListener("click", () => {
     const pick = document.querySelector('input[name="vsp-rel"]:checked');
     if (!pick) { $("vsp-error").textContent = "Pick how the patient is related to the member."; return; }
+    const dob = readDate($("vsp-mdob"));
+    if (dob === null) { $("vsp-error").textContent = DATE_MSG; return; }
+    const p = vspData.d.p;
+    const parts = t0(p.insurance_holder).split(/\s+/);
+    const m = vspData.member ? Object.assign({}, vspData.member) :
+      { last_name: parts.length > 1 ? parts[parts.length - 1] : "", first_name: parts.length > 1 ? parts.slice(0, -1).join(" ") : parts[0] };
+    if (!t0(m.address)) { m.address = p.address; m.city = p.city; m.state = p.state; m.zip_code = p.zip_code; }   // same household
+    m.birthday = dob;
+    m.sex = $("vsp-msex").value;
     $("vsp-modal").classList.add("hidden");
-    printForm(buildVSP(vspData.d, pick.value, vspData.member));
+    printForm(buildVSP(vspData.d, pick.value, m));
   });
 
   /* ---------- Search ---------- */
