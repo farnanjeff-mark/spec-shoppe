@@ -76,7 +76,7 @@
   fieldset.green { border-left-color: #6B7043; }
   fieldset.red { border-left-color: #6B7043; }
   fieldset.rxbox { border-left-color: #6B7043; background: #f2f2ea; }
-  fieldset.pricebox { border-left-color: #6B7043; background: #e3e5d3; }   /* same darker olive as the check box groups */
+  fieldset.pricebox { border-left-color: #6B7043; background: #d6d9c1; }   /* same darker olive as the check box groups */
   fieldset.pbox { background: var(--white); }   /* Patient box stays white */
   fieldset.brownbox { border-left-color: #6B7043; background: #f2f2ea; }
   fieldset.brownbox > legend { color: #6F4E37; }
@@ -242,7 +242,7 @@
   .pchecks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; margin-bottom: 6px; }
   .check { display: flex; align-items: center; gap: 6px; font-weight: normal; }
   .check input { width: 16px; height: 16px; accent-color: var(--blue); margin: 0; flex: none; }
-  input[readonly] { background: #f0f0f0; border-color: #b5b5b5; }
+  input[readonly] { background: #eadfd4; border-color: #c4ae99; color: #3d2b1f; }   /* light coffee: figured for you, can't type here */
   .lrow { display: grid; grid-template-columns: 136px minmax(0, 1fr); gap: 0; margin: 0 0 4px; font-weight: normal; }
   main.wide .lrow { gap: 0; }
   .tag { font-weight: bold; padding: 4px 6px; display: flex; align-items: center; white-space: nowrap; }
@@ -251,9 +251,9 @@
   .cgroup { padding: 4px 8px 6px; margin-bottom: 6px; }
   .cgroup.checkbox-ins, .cgroup.claim {
     border: 1px solid var(--line); border-left: 5px solid #6B7043;
-    background: #e3e5d3; border-radius: 3px;   /* a darker shade of the Contacts Rx gray-green */
+    background: #d6d9c1; border-radius: 3px;   /* a darker shade of the Contacts Rx gray-green */
   }
-  .cgroup.claim { margin-bottom: 0; }
+  .cgroup.claim { margin-bottom: 0; background: #eadfd4; }   /* light coffee, same as the Tax and Total boxes */
   .cgtitle { font-weight: bold; margin: 0 0 3px; }
   .cgroup.checkbox-ins .cgtitle, .cgroup.claim .cgtitle { color: #4f5331; }
   .datefiled { max-width: 160px; margin-top: 2px; }
