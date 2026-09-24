@@ -1696,7 +1696,7 @@
         '<div><div class="rtitle">RECEIPT</div><div class="rdate">Date: <b>' + esc(fmtDate(dateISO)) + "</b></div></div></div>" +
       '<div class="rpatient"><div><b>' + name + "</b></div><div class=\"raddr\">" + addr + "</div></div>" +
       '<table><thead><tr><th>Date</th><th>Description</th><th class="amt">Amount</th></tr></thead><tbody>' + rows +
-      '</tbody><tfoot><tr><td colspan="2" class="rtotlab">Total</td><td class="amt rtotamt">' + moneyCell(total) + "</td></tr></tfoot></table>" +
+      '</tbody><tfoot><tr><td colspan="2" class="rtotlab">Total owing</td><td class="amt rtotamt">' + moneyCell(total) + "</td></tr></tfoot></table>" +
       "</div>";
   }
   $("receipt-btn").addEventListener("click", async () => {
@@ -1762,11 +1762,11 @@
     if (!ord.length) {
       box.innerHTML = '<p class="note">No order lines on this visit yet.</p>';
     } else {
-      ord.forEach(o => {
+      ord.forEach((o, i) => {
         const lab = document.createElement("label");
         lab.className = "qtybox";
         const span = document.createElement("span");
-        span.textContent = [fmtDate(o.nb_date), o.nb_note].filter(Boolean).join(" \u2014 ") || "Order line";
+        span.textContent = "Line " + (i + 1);   // same order as the lines in the Orders box
         const inp = document.createElement("input");
         inp.type = "text"; inp.dataset.orderId = o.order_id; inp.value = o.cpt_code || ""; inp.autocomplete = "off";
         lab.appendChild(span); lab.appendChild(inp);
@@ -1947,15 +1947,14 @@
   let vspData = null;
   const normName = (t) => t0(t).toLowerCase().replace(/[^a-z ]/g, "").replace(/\s+/g, " ");
 
+  // Lens type box -> circle: "tri..." Tri-focal; bi/bis/bifocal Bi-focal; single/SV Single; anything else Progressive; blank = none.
   function lensTypeSpot(t) {
     t = t0(t).toLowerCase();
     if (!t) return null;
-    if (/lentic/.test(t)) return [6.65, 6.30];
-    if (/prog|\bpal\b|no.?line/.test(t)) return [6.65, 6.085];
-    if (/tri|7x28|8x35/.test(t)) return [5.24, 6.515];
-    if (/bi.?foc|\bbf\b|\bft\b|flat.?top|\bd.?(25|28|35)\b|exec/.test(t)) return [5.24, 6.30];
+    if (/tri/.test(t)) return [5.24, 6.515];
+    if (/\bbis?\b|bi.?foc/.test(t)) return [5.24, 6.30];
     if (/single|\bsv\b|\bs\/v\b/.test(t)) return [5.24, 6.085];
-    return null;
+    return [6.65, 6.085];
   }
 
   function buildVSP(d, rel, member) {
