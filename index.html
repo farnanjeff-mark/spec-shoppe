@@ -779,15 +779,57 @@
       <fieldset>
         <legend>Diagnosis codes (ICD)</legend>
         <div class="countchecks">
-          <label class="codebox">1 <input type="text" id="claim-dx1" autocomplete="off"></label>
-          <label class="codebox">2 <input type="text" id="claim-dx2" autocomplete="off"></label>
-          <label class="codebox">3 <input type="text" id="claim-dx3" autocomplete="off"></label>
+          <label class="codebox">1 <input type="text" id="claim-dx1" list="dl-icd" autocomplete="off"></label>
+          <label class="codebox">2 <input type="text" id="claim-dx2" list="dl-icd" autocomplete="off"></label>
+          <label class="codebox">3 <input type="text" id="claim-dx3" list="dl-icd" autocomplete="off"></label>
         </div>
       </fieldset>
       <fieldset>
         <legend>Procedure codes (CPT)</legend>
         <div id="claim-cpt-items"></div>
       </fieldset>
+  <!-- Common codes: the drop-down lists on the Claim info code boxes. Add a line to add a code. -->
+  <datalist id="dl-icd">
+    <option value="H52.13" label="Myopia, both eyes"></option>
+    <option value="H52.03" label="Hyperopia, both eyes"></option>
+    <option value="H52.223" label="Regular astigmatism, both eyes"></option>
+    <option value="H52.4" label="Presbyopia"></option>
+    <option value="H52.31" label="Anisometropia"></option>
+    <option value="Z01.00" label="Routine eye exam, normal"></option>
+    <option value="Z01.01" label="Routine eye exam, abnormal"></option>
+  </datalist>
+  <datalist id="dl-exam">
+    <option value="92015" label="Refraction"></option>
+    <option value="S0620" label="Routine exam w/ refraction, new patient"></option>
+    <option value="S0621" label="Routine exam w/ refraction, established"></option>
+  </datalist>
+  <datalist id="dl-frame">
+    <option value="V2020" label="Frame"></option>
+    <option value="V2025" label="Deluxe frame"></option>
+  </datalist>
+  <datalist id="dl-lens">
+    <option value="V2100" label="SV sphere, to ±4.00"></option>
+    <option value="V2101" label="SV sphere, ±4.12 to ±7.00"></option>
+    <option value="V2103" label="SV sph + cyl, to ±4.00 / 2.00 cyl"></option>
+    <option value="V2104" label="SV sph + cyl, to ±4.00 / 2.12–4.00 cyl"></option>
+    <option value="V2200" label="Bifocal sphere, to ±4.00"></option>
+    <option value="V2203" label="Bifocal sph + cyl, to ±4.00 / 2.00 cyl"></option>
+    <option value="V2300" label="Trifocal sphere, to ±4.00"></option>
+    <option value="V2303" label="Trifocal sph + cyl, to ±4.00 / 2.00 cyl"></option>
+    <option value="V2781" label="Progressive"></option>
+    <option value="V2784" label="Polycarbonate"></option>
+    <option value="V2782" label="High index 1.54–1.65"></option>
+  </datalist>
+  <datalist id="dl-misc">
+    <option value="V2744" label="Photochromic"></option>
+    <option value="V2745" label="Tint"></option>
+    <option value="V2750" label="Anti-reflective coating"></option>
+    <option value="V2760" label="Scratch coating"></option>
+  </datalist>
+  <datalist id="dl-contacts">
+    <option value="V2520" label="Soft contact lens, spherical"></option>
+    <option value="V2521" label="Soft contact lens, toric"></option>
+  </datalist>
       <p class="error" id="claim-error" role="alert"></p>
       <div class="countbtns">
         <button type="button" class="primary" id="claim-ok">Save</button>
@@ -795,8 +837,7 @@
       </div>
       <p class="note" style="margin: 12px 0 4px;">Print a claim form (saves what's above first):</p>
       <div class="countbtns" style="flex-wrap: wrap;">
-        <button type="button" class="secondary" id="claim-hcfa-medicare">HCFA &ndash; Medicare</button>
-        <button type="button" class="secondary" id="claim-hcfa-other">HCFA &ndash; Other insurance</button>
+        <button type="button" class="secondary" id="claim-hcfa-other">HCFA</button>
         <button type="button" class="secondary" id="claim-vsp">VSP form</button>
       </div>
     </div>
@@ -1750,8 +1791,8 @@
   /* ---------- Insurance claim info popup (sex, ICD/CPT codes; entered separately, in a batch, before printing a claim) ---------- */
   const claimModal = $("claim-modal");
   // Pricing box items that can go on the HCFA: [label, price column, CPT column]
-  const CLAIM_ITEMS = [["Exam", "exam", "cpt_exam"], ["Frame", "frame_chg", "cpt_frame"], ["Lens", "lens_chg", "cpt_lens"],
-    ["Tints/misc", "misc_chg", "cpt_misc"], ["Contacts", "contacts_chg", "cpt_contacts"]];
+  const CLAIM_ITEMS = [["Exam", "exam", "cpt_exam", "dl-exam"], ["Frame", "frame_chg", "cpt_frame", "dl-frame"], ["Lens", "lens_chg", "cpt_lens", "dl-lens"],
+    ["Tints/misc", "misc_chg", "cpt_misc", "dl-misc"], ["Contacts", "contacts_chg", "cpt_contacts", "dl-contacts"]];
   $("claim-btn").addEventListener("click", async () => {
     if (!(await ensureSaved())) return;
     if (rxIndex < 0 || !rxRows[rxIndex]) {
@@ -1767,13 +1808,14 @@
     $("claim-dx3").value = rx.dx3 || "";
     const box = $("claim-cpt-items");
     box.innerHTML = "";
-    CLAIM_ITEMS.forEach(([label, priceCol, cptCol]) => {
+    CLAIM_ITEMS.forEach(([label, priceCol, cptCol, listId]) => {
       const lab = document.createElement("label");
       lab.className = "qtybox";
       const span = document.createElement("span");
       span.textContent = label + " ($" + (Number(rx[priceCol]) || 0).toFixed(2) + ")";
       const inp = document.createElement("input");
       inp.type = "text"; inp.dataset.col = cptCol; inp.value = rx[cptCol] || ""; inp.autocomplete = "off";
+      inp.setAttribute("list", listId);
       lab.appendChild(span); lab.appendChild(inp);
       box.appendChild(lab);
     });
@@ -1948,7 +1990,6 @@
     claimModal.classList.add("hidden");
     printForm(r.svg);
   }
-  $("claim-hcfa-medicare").addEventListener("click", () => printHCFA("medicare"));
   $("claim-hcfa-other").addEventListener("click", () => printHCFA("other"));
 
   // VSP: the member is the Insurance holder ("Kellan Farnan"). Blank, or the patient's own name, means the patient is the member.
