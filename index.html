@@ -536,13 +536,14 @@
           <div class="pcol">
             <div class="cgroup ins">
             <label class="lrow"><span class="tag">Birthday</span><input type="text" id="f_birthday" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off" data-kind="birth"></label>
-            <label class="lrow"><span class="tag">Medical number</span><input type="text" id="f_medical_no" autocomplete="off"></label>
+            <label class="lrow"><span class="tag">Medicaid number</span><input type="text" id="f_medical_no" autocomplete="off"></label>
             <label class="lrow"><span class="tag">VSP number</span><input type="text" id="f_vsp_number" autocomplete="off"></label>
             <label class="lrow"><span class="tag">EyeMed number</span><input type="text" id="f_ecpa_number" autocomplete="off"></label>
             <label class="lrow"><span class="tag">NVA number</span><input type="text" id="f_nva_number" autocomplete="off"></label>
-            <label class="lrow"><span class="tag">Occupation</span><input type="text" id="f_occupation" autocomplete="off"></label>
-            <label class="lrow"><span class="tag">Employer</span><input type="text" id="f_employer" autocomplete="off"></label>
             <label class="lrow"><span class="tag">Insurance holder</span><input type="text" id="f_insurance_holder" autocomplete="off"></label>
+            <!-- Two open spots (were Occupation and Employer), kept for future fields -->
+            <label class="lrow spacer" aria-hidden="true" style="visibility: hidden;"><span class="tag">&nbsp;</span><input type="text" tabindex="-1" disabled></label>
+            <label class="lrow spacer" aria-hidden="true" style="visibility: hidden;"><span class="tag">&nbsp;</span><input type="text" tabindex="-1" disabled></label>
             </div>
           </div>
 
@@ -990,7 +991,7 @@
 
   /* ---------- Patient fields ---------- */
   const P_TEXT = ["last_name", "first_name", "address", "city", "state", "zip_code",
-    "home_phone", "work_phone", "cell_phone", "email", "medical_no", "occupation", "employer",
+    "home_phone", "work_phone", "cell_phone", "email", "medical_no",
     "insurance_holder", "vsp_number", "ecpa_number", "nva_number"];
   const P_DATES = ["birthday", "date_filed"];
   const P_BOOLS = ["ck_vsp", "ck_eye_med", "ck_xix", "ck_home_state_health", "ck_nva", "ck_abbey_convent",
@@ -1625,7 +1626,7 @@
     "f_last_name", "f_first_name", "f_address", "f_city", "f_state", "f_zip_code",
     "f_home_phone", "f_work_phone", "f_cell_phone", "f_email",
     "f_birthday", "f_medical_no", "f_vsp_number", "f_ecpa_number", "f_nva_number",
-    "f_occupation", "f_employer", "f_insurance_holder",
+    "f_insurance_holder",
     "v_service_date", "v_doctor", "v_recall_date",
     "v_rsph", "v_rcyl", "v_raxis", "v_radd",
     "v_lsph", "v_lcyl", "v_laxis", "v_ladd",
