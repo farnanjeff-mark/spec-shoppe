@@ -1377,13 +1377,13 @@
       if (!rowHasContent(r)) continue;
       const orderIso = readDate(r.date);
       if (orderIso === null) return { error: DATE_MSG, field: r.date };
-      if (!orderIso) return { error: "Enter a date on each order line.", field: r.date };
+      // A blank date is fine: many order lines are just notes.
       const c = toCents(r.price.value);
       if (Number.isNaN(c)) return { error: "Order prices must be numbers, like 45.00.", field: r.price };
       if (r.dirty || r.id === null) {
         calcRow(r);
         lines.push({ row: r, rec: {
-          nb_date: orderIso,
+          nb_date: orderIso || null,
           nb_note: r.note.value.trim() || null,
           nb_price: r.price.value.trim() === "" ? null : c / 100,
           tax: r.tax.value === "" ? null : Number(r.tax.value),
