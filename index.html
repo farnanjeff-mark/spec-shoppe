@@ -120,6 +120,17 @@
   /* Main menu sections: light tan panels */
   .menupanel { background: #f5f0e6; border: 1px solid #e6dcc8; border-radius: var(--r); padding: 14px; margin: 0 0 20px; }
   .menupanel .menu { margin: 0; }
+  .menu button.manage .micon { background: rgba(143, 42, 34, 0.1); }
+  button.danger { background: #8f2a22; color: var(--white); border: 1px solid #8f2a22; border-radius: 3px; padding: 8px 16px; font-weight: bold; cursor: pointer; }
+  button.danger:hover { background: #6e1f19; }
+  button.danger:disabled { opacity: 0.6; cursor: default; }
+  .mgwarn { background: #f6e6e4; border-left: 5px solid #8f2a22; padding: 8px 12px; color: var(--ink); }
+  .mgpat { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--white); border: 1px solid var(--line); border-left: 6px solid #6B7043; border-radius: 3px; padding: 12px 14px; }
+  .mgpat strong { font-size: 13pt; display: block; }
+  .mgpat .note { margin: 0; }
+  .mgh { margin: 18px 0 8px; }
+  .mgvisit { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--white); border: 1px solid var(--line); border-radius: 3px; padding: 8px 14px; margin-bottom: 6px; }
+  .mgvisit .danger { padding: 6px 12px; font-size: 10pt; }
   .findgroup { font-size: 9.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #6B7043; margin: 0 0 6px; }
 
   /* Lens price sheet */
@@ -467,6 +478,10 @@
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6F4E37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></span>
         <span class="mtext"><strong>Download backup (Excel)</strong><span id="backup-note"></span></span>
       </button>
+      <button type="button" class="manage" data-go="manage">
+        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8f2a22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><line x1="10" y1="10" x2="10" y2="17"/><line x1="14" y1="10" x2="14" y2="17"/></svg></span>
+        <span class="mtext"><strong>Manage records</strong></span>
+      </button>
     </div>
     </div>
     <div class="menupanel">
@@ -733,6 +748,31 @@
   </section>
 
   <!-- Patients with a check box marked -->
+  <section id="view-manage" class="hidden">
+    <h2>Manage records</h2>
+    <p class="note mgwarn">Deleting can't be undone. Run <strong>Download backup</strong> on the main menu first if you haven't today.</p>
+    <div id="mg-find">
+      <div class="searchrow">
+        <label>Last name, first name, or birthday
+          <input type="search" id="mg-search" autocomplete="off">
+        </label>
+      </div>
+      <p class="note" id="mg-note">Find the patient whose record you want to delete.</p>
+      <div class="results" id="mg-results"></div>
+    </div>
+    <div id="mg-detail" class="hidden">
+      <div class="mgpat">
+        <div><strong id="mg-name"></strong><span id="mg-info" class="note"></span></div>
+        <button type="button" class="danger" id="mg-del-patient">Delete patient</button>
+      </div>
+      <h3 class="mgh">Visits</h3>
+      <div id="mg-visits"></div>
+      <p><button type="button" class="secondary" id="mg-other">Pick a different patient</button></p>
+    </div>
+    <p class="error" id="mg-error" role="alert"></p>
+    <button type="button" class="secondary" data-go="menu">Back to main menu</button>
+  </section>
+
   <section id="view-checked" class="hidden">
     <h2 id="checked-title">Patients</h2>
     <p class="note" id="checked-note"></p>
@@ -887,6 +927,22 @@
   </div>
 </div>
 
+<div id="mg-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Confirm delete">
+  <div class="modalbox countbox">
+    <div class="modalhead"><h2 id="mg-mtitle">Delete?</h2></div>
+    <div class="modalscroll">
+      <p id="mg-mmsg" style="margin-top: 0;"></p>
+      <p class="note" id="mg-mbackup"></p>
+      <label id="mg-mtype" class="hidden">Type the last name to confirm <input type="text" id="mg-mname" autocomplete="off"></label>
+      <p class="error" id="mg-merror" role="alert"></p>
+      <div class="countbtns">
+        <button type="button" class="danger" id="mg-mok">Delete</button>
+        <button type="button" class="secondary" id="mg-mcancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="tax-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Tax calculator">
   <div class="modalbox countbox">
     <div class="modalhead"><h2>Tax calculator</h2><span class="note">Nothing here is saved</span></div>
@@ -935,7 +991,7 @@
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   /* ---------- Screens ---------- */
-  const views = ["login", "menu", "patients", "checked", "recalls", "vendors", "vendor", "record", "counts"];
+  const views = ["login", "menu", "patients", "checked", "recalls", "vendors", "vendor", "record", "counts", "manage"];
   function show(name) {
     views.forEach(v => document.getElementById("view-" + v).classList.toggle("hidden", v !== name));
     document.getElementById("main").classList.toggle("wide", name === "record");
@@ -2278,6 +2334,126 @@
     return b;
   }
 
+  /* ---------- Manage records: delete a visit or a whole patient ---------- */
+  let mgPatient = null, mgSeq = 0, mgTimer = null, mgPending = null;
+  function openManage() {
+    mgPatient = null;
+    $("mg-search").value = ""; $("mg-results").innerHTML = ""; $("mg-error").textContent = "";
+    $("mg-note").textContent = "Find the patient whose record you want to delete.";
+    $("mg-find").classList.remove("hidden"); $("mg-detail").classList.add("hidden");
+    show("manage");
+    $("mg-search").focus();
+  }
+  async function mgSearch() {
+    const raw = $("mg-search").value.trim(), mine = ++mgSeq;
+    const box = $("mg-results"); box.innerHTML = "";
+    if (!raw) { $("mg-note").textContent = "Find the patient whose record you want to delete."; return; }
+    let q = db.from("patients").select("patient_id,last_name,first_name,birthday,city,home_phone,work_phone,cell_phone")
+      .order("last_name").order("first_name").limit(50);
+    let bad = false;
+    raw.split(/\s+/).slice(0, 4).forEach(part => {
+      if (/^[\d\/\-.]+$/.test(part)) {
+        const digits = part.replace(/\D/g, "");
+        const c = digits.length === 6 ? birthdayCandidates(digits) : [];
+        if (c.length) q = q.in("birthday", c); else bad = true;
+      } else {
+        const t = part.replace(/[,()"\\%*_]/g, "");
+        if (t) q = q.or("last_name.ilike.%" + t + "%,first_name.ilike.%" + t + "%");
+      }
+    });
+    if (bad) { $("mg-note").textContent = "Type a birthday as six digits, like 01/02/65."; return; }
+    const { data, error } = await q;
+    if (mine !== mgSeq) return;
+    if (error) { $("mg-note").textContent = "The search didn't work. Check the internet connection and try again."; return; }
+    $("mg-note").textContent = data.length ? "Click the patient." : "No patient found.";
+    data.forEach(p => {
+      const b = patientRow(p, "manage");
+      const nb = b.cloneNode(true);            // same look, but opens here instead of the patient screen
+      nb.addEventListener("click", () => mgOpen(p.patient_id));
+      box.appendChild(nb);
+    });
+  }
+  $("mg-search").addEventListener("input", () => { clearTimeout(mgTimer); mgTimer = setTimeout(mgSearch, 250); });
+
+  async function mgOpen(pid) {
+    $("mg-error").textContent = "";
+    const [pr, rx] = await Promise.all([
+      db.from("patients").select("*").eq("patient_id", pid).single(),
+      db.from("prescriptions").select("prescription_id,service_date,doctor,office,total").eq("patient_id", pid)
+        .order("service_date", { ascending: false, nullsFirst: true }).order("prescription_id", { ascending: false })
+    ]);
+    if (pr.error || rx.error) { $("mg-error").textContent = "That record didn't load. Check the internet connection and try again."; return; }
+    const ids = rx.data.map(r => r.prescription_id);
+    let ordCount = {};
+    if (ids.length) {
+      const { data: ord } = await db.from("orders").select("prescription_id").in("prescription_id", ids);
+      (ord || []).forEach(o => { ordCount[o.prescription_id] = (ordCount[o.prescription_id] || 0) + 1; });
+    }
+    mgPatient = { p: pr.data, visits: rx.data, ordCount };
+    const p = pr.data;
+    $("mg-name").textContent = [p.last_name, p.first_name].filter(Boolean).join(", ") || "(no name)";
+    $("mg-info").textContent = [p.birthday ? "Born " + fmtDate(p.birthday) : "", p.city || "", "Patient #" + p.patient_id].filter(Boolean).join("   |   ");
+    const vbox = $("mg-visits"); vbox.innerHTML = "";
+    if (!rx.data.length) vbox.innerHTML = '<p class="note">No visits.</p>';
+    rx.data.forEach(r => {
+      const row = document.createElement("div"); row.className = "mgvisit";
+      const t = document.createElement("span");
+      const n = ordCount[r.prescription_id] || 0;
+      t.textContent = [r.service_date ? fmtDate(r.service_date) : "No date", r.doctor, r.office,
+        r.total != null ? "$" + Number(r.total).toFixed(2) : "", n + (n === 1 ? " order line" : " order lines")].filter(Boolean).join("   \u00b7   ");
+      const del = document.createElement("button"); del.type = "button"; del.className = "danger"; del.textContent = "Delete visit";
+      del.addEventListener("click", () => mgConfirm("visit", r));
+      row.appendChild(t); row.appendChild(del); vbox.appendChild(row);
+    });
+    $("mg-find").classList.add("hidden"); $("mg-detail").classList.remove("hidden");
+  }
+  $("mg-other").addEventListener("click", () => { $("mg-find").classList.remove("hidden"); $("mg-detail").classList.add("hidden"); $("mg-search").focus(); });
+  $("mg-del-patient").addEventListener("click", () => mgConfirm("patient"));
+
+  function mgConfirm(kind, visit) {
+    const p = mgPatient.p, name = [p.first_name, p.last_name].filter(Boolean).join(" ");
+    mgPending = { kind, visit };
+    $("mg-merror").textContent = ""; $("mg-mname").value = "";
+    if (kind === "visit") {
+      const n = mgPatient.ordCount[visit.prescription_id] || 0;
+      $("mg-mtitle").textContent = "Delete this visit?";
+      $("mg-mmsg").textContent = name + ": visit " + (visit.service_date ? fmtDate(visit.service_date) : "with no date") +
+        ", with " + n + (n === 1 ? " order line" : " order lines") + " and any daily counts tied to it. The patient and other visits stay.";
+      $("mg-mtype").classList.add("hidden");
+    } else {
+      const v = mgPatient.visits.length;
+      const o = Object.values(mgPatient.ordCount).reduce((a, b) => a + b, 0);
+      $("mg-mtitle").textContent = "Delete this patient?";
+      $("mg-mmsg").textContent = name + " (patient #" + p.patient_id + "), with " + v + (v === 1 ? " visit" : " visits") +
+        ", " + o + (o === 1 ? " order line" : " order lines") + ", and any daily counts. Everything for this patient is removed.";
+      $("mg-mtype").classList.remove("hidden");
+    }
+    let backedUp = false;
+    try { backedUp = sessionStorage.getItem("backupDay") === new Date().toDateString(); } catch (e) {}
+    $("mg-mbackup").textContent = backedUp ? "" : "This can't be undone. No backup has been downloaded on this computer today.";
+    $("mg-modal").classList.remove("hidden");
+    (kind === "patient" ? $("mg-mname") : $("mg-mcancel")).focus();
+  }
+  $("mg-mcancel").addEventListener("click", () => $("mg-modal").classList.add("hidden"));
+  $("mg-mok").addEventListener("click", async () => {
+    const { kind, visit } = mgPending, p = mgPatient.p;
+    if (kind === "patient") {
+      const typed = $("mg-mname").value.trim().toLowerCase();
+      if (!typed || typed !== String(p.last_name || "").trim().toLowerCase()) {
+        $("mg-merror").textContent = "Type the last name exactly as shown to confirm."; return;
+      }
+    }
+    $("mg-mok").disabled = true;
+    const res = kind === "visit"
+      ? await db.rpc("delete_visit", { p_prescription_id: visit.prescription_id })
+      : await db.rpc("delete_patient", { p_patient_id: p.patient_id });
+    $("mg-mok").disabled = false;
+    if (res.error) { $("mg-merror").textContent = "It didn't delete. Check the internet connection and try again."; return; }
+    $("mg-modal").classList.add("hidden");
+    if (kind === "visit") { await mgOpen(p.patient_id); $("mg-error").textContent = ""; }
+    else { openManage(); $("mg-note").textContent = "Patient deleted."; }
+  });
+
   /* ---------- Find by check box (main menu buttons) ---------- */
   const FINDS = [
     { group: "ins", col: "ck_vsp", claim: true, label: "VSP", button: "Find VSP patients", cls: "" },
@@ -3146,6 +3322,7 @@
       const stamp = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(wb, "spec-shoppe-backup-" + stamp + ".xlsx");
       note.textContent = "Downloaded.";
+      try { sessionStorage.setItem("backupDay", new Date().toDateString()); } catch (e) {}
     } catch (err) {
       note.textContent = "Backup failed. Check the internet connection and try again.";
     } finally {
@@ -3161,6 +3338,7 @@
       else if (go === "vendors") openVendorList();
       else if (go === "recalls") openRecalls();
       else if (go === "counts") openCounts();
+      else if (go === "manage") openManage();
       else show(go);
     });
   });
