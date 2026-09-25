@@ -209,6 +209,12 @@
   .results button:hover { background: #f5f8fc; }
   .results button strong { font-size: 13pt; }
   .results button span { color: var(--muted); font-size: 11pt; }
+  .results button.withclaim { grid-template-columns: 1fr auto; column-gap: 14px; }
+  .results button.withclaim strong, .results button.withclaim span { grid-column: 1; }
+  .claimtag { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-style: normal; font-weight: bold; font-size: 10.5pt;
+    padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+  .claimtag.filed { background: #d6d9c1; color: #4f5331; }
+  .claimtag.due { background: #8f2a22; color: var(--white); }
   .note { color: var(--muted); margin: 0 0 14px; }
 
   /* Placeholder panel */
@@ -2247,7 +2253,7 @@
   }
 
   // One patient in a list (search results and the check box lists). "from" is where Back should return to.
-  function patientRow(p, from) {
+  function patientRow(p, from, showClaim) {
     const b = document.createElement("button");
     b.type = "button";
     const strong = document.createElement("strong");
@@ -2260,20 +2266,28 @@
     if (phone) bits.push(phone);
     span.textContent = bits.join("   |   ");
     b.appendChild(strong); b.appendChild(span);
+    if (showClaim) {
+      // Right side of the card: when the claim was filed, or that it still needs filing
+      const tag = document.createElement("em");
+      tag.className = "claimtag " + (p.ck_filed ? "filed" : "due");
+      tag.textContent = p.ck_filed ? ("Filed" + (p.date_filed ? " " + fmtDate(p.date_filed) : "")) : "Needs to be filed";
+      b.classList.add("withclaim");
+      b.appendChild(tag);
+    }
     b.addEventListener("click", () => { cameFrom = from; openRecord(p.patient_id); });
     return b;
   }
 
   /* ---------- Find by check box (main menu buttons) ---------- */
   const FINDS = [
-    { group: "ins", col: "ck_vsp", label: "VSP", button: "Find VSP patients", cls: "" },
-    { group: "ins", col: "ck_eye_med", label: "Eye Med", button: "Find Eye Med patients", cls: "" },
-    { group: "ins", col: "ck_xix", label: "Medicaid", button: "Find Medicaid patients", cls: "" },
-    { group: "ins", col: "ck_home_state_health", label: "Home State Health", button: "Find Home State Health patients", cls: "" },
+    { group: "ins", col: "ck_vsp", claim: true, label: "VSP", button: "Find VSP patients", cls: "" },
+    { group: "ins", col: "ck_eye_med", claim: true, label: "Eye Med", button: "Find Eye Med patients", cls: "" },
+    { group: "ins", col: "ck_xix", claim: true, label: "Medicaid", button: "Find Medicaid patients", cls: "" },
+    { group: "ins", col: "ck_home_state_health", claim: true, label: "Home State Health", button: "Find Home State Health patients", cls: "" },
     { group: "ins", col: "ck_nva", label: "NVA", button: "Find NVA patients", cls: "" },
     { group: "bill", col: "ck_abbey_convent", label: "Bill Abbey/Convent", button: "Find Abbey/Convent patients", cls: "" },
     { group: "bill", col: "ck_lions", label: "Bill Lions Club", button: "Find Lions Club patients", cls: "" },
-    { group: "ins", col: "ck_other_ins", label: "Bill Other Ins", button: "Find Other Ins patients", cls: "" },
+    { group: "ins", col: "ck_other_ins", claim: true, label: "Bill Other Ins", button: "Find Other Ins patients", cls: "" },
     { group: "bill", col: "ck_pt_took_frames", label: "Pt Took Frame", button: "Find Pt Took Frame", cls: "claim" },
     { group: "bill", col: "ck_payments", label: "Payments", button: "Find Payments", cls: "claim" }
   ];
@@ -2309,7 +2323,7 @@
     const mine = ++checkedSeq;
     const note = $("checked-note");
     const { data, error, count } = await db.from("patients")
-      .select("patient_id,last_name,first_name,birthday,city,home_phone,work_phone,cell_phone", { count: "exact" })
+      .select("patient_id,last_name,first_name,birthday,city,home_phone,work_phone,cell_phone,ck_filed,date_filed", { count: "exact" })
       .eq(checkedFind.col, true)
       .order("last_name").order("first_name").order("patient_id")
       .range(0, upTo - 1);
@@ -2323,7 +2337,7 @@
     }
     note.style.color = ""; note.style.fontWeight = "";
     checkedLoaded = data.length;
-    data.forEach(p => box.appendChild(patientRow(p, "checked")));
+    data.forEach(p => box.appendChild(patientRow(p, "checked", checkedFind.claim)));
     const total = count == null ? data.length : count;
     note.textContent = total === 0
       ? "No patients have " + checkedFind.label + " checked."
