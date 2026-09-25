@@ -328,6 +328,7 @@
   .ohead { position: sticky; top: 0; background: #f2f2ea; font-weight: bold; color: var(--muted); z-index: 1; }
   .ohead .num, .orow input.num { text-align: right; }
   .orow button.orm { padding: 3px 8px; font-size: 9pt; }
+  #f_patient_id { background: var(--red); border-color: var(--red); color: var(--white); font-weight: bold; }
   .onote { color: var(--red); font-weight: bold; margin: 4px 0 0; min-height: 1.2em; }
   @media (max-width: 1000px) {
     .pgrid { grid-template-columns: 1fr; }
@@ -608,7 +609,7 @@
             </div>
             <div class="visitbtns">
               <button type="button" class="primary" id="rx-new">New visit</button>
-              <button type="button" class="secondary" id="claim-btn">Claim info</button>
+              <button type="button" class="primary" id="claim-btn">Claim info</button>
             </div>
             <div class="visitlist" id="visit-list"></div>
           </div>
@@ -634,7 +635,7 @@
             <div class="vdesc">
               <div class="lensline">
                 <label class="drow"><span class="tag">Lens type</span><input type="text" id="v_lens_type" autocomplete="off"></label>
-                <button type="button" class="secondary" id="lens-btn">Lens prices</button>
+                <button type="button" class="primary" id="lens-btn">Lens prices</button>
               </div>
               <label class="drow"><span class="tag">Misc</span><input type="text" id="v_misc" autocomplete="off"></label>
               <label class="drow"><span class="tag">Frame</span><input type="text" id="v_frame" autocomplete="off"></label>
@@ -922,6 +923,20 @@
       <div class="countbtns">
         <button type="button" class="primary" id="receipt-ok">Print</button>
         <button type="button" class="secondary" id="receipt-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="dup-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Patient may already exist">
+  <div class="modalbox countbox">
+    <div class="modalhead"><h2>This patient may already exist</h2></div>
+    <div class="modalscroll">
+      <p style="margin-top: 0;">A patient with this name is already in the system. Nothing has been saved yet.</p>
+      <div class="results" id="dup-list"></div>
+      <div class="countbtns" style="flex-wrap: wrap;">
+        <button type="button" class="danger" id="dup-exit">Exit without saving</button>
+        <button type="button" class="secondary" id="dup-keep">Different person &ndash; keep entering</button>
       </div>
     </div>
   </div>
@@ -1282,7 +1297,7 @@
       row.total.value = moneyText(rec.total);
     }
     const rm = document.createElement("button");
-    rm.type = "button"; rm.className = "secondary orm"; rm.textContent = "Remove";
+    rm.type = "button"; rm.className = "primary orm"; rm.textContent = "Remove";
     rm.addEventListener("click", () => removeOrderRow(row));
     [row.date, row.note, row.price, row.tax, row.total, rm].forEach(el => wrap.appendChild(el));
     wrap._row = row;
@@ -1399,15 +1414,31 @@
     const { data, error } = await db.from("patients")
       .select("patient_id,last_name,first_name,birthday,cell_phone,home_phone")
       .ilike("last_name", last).ilike("first_name", first).limit(5);
-    if (error || !data || !data.length) return;
+    if (error || !data || !data.length) return false;
     dupWarned = true;
-    const box = $("dup-warning");
-    const list = data.map(p => [p.last_name, p.first_name].filter(Boolean).join(", ") +
-      (p.birthday ? " (DOB " + fmtDate(p.birthday) + ")" : "") +
-      (p.cell_phone || p.home_phone ? " \u2014 " + (p.cell_phone || p.home_phone) : "")).join("; ");
-    box.textContent = "A patient with this name already exists: " + list + ". Search for them instead if this is the same person, or keep going if it's someone else.";
-    box.style.display = "block";
+    clearTimeout(autoTimer);                       // nothing saves while the question is open
+    const list = $("dup-list"); list.innerHTML = "";
+    data.forEach(p => {
+      const b = patientRow(p, "patients").cloneNode(true);   // click one to open that existing patient instead
+      b.addEventListener("click", () => { dupDiscard(); openRecord(p.patient_id); });
+      list.appendChild(b);
+    });
+    $("dup-modal").classList.remove("hidden");
+    $("dup-exit").focus();                          // Enter = Exit without saving
+    return true;
   }
+  // Throw away the unsaved new patient
+  function dupDiscard() {
+    clearTimeout(autoTimer);
+    pDirty = false; rDirty = false; oDirty = false;
+    clearMessages();
+    $("dup-modal").classList.add("hidden");
+  }
+  $("dup-exit").addEventListener("click", () => { dupDiscard(); goSearch(true); });
+  $("dup-keep").addEventListener("click", () => {
+    $("dup-modal").classList.add("hidden");
+    (pin.birthday.value.trim() ? pin.address : pin.birthday).focus();
+  });
   ["f_last_name", "f_first_name", "f_birthday"].forEach(id => $(id).addEventListener("blur", checkDuplicatePatient));
 
   async function openRecord(id) {
@@ -1597,9 +1628,13 @@
     }
   }
 
-  function saveNow(opts) {
+  async function saveNow(opts) {
     opts = opts || {};
     clearTimeout(autoTimer);
+    if (patientId === null && !dupWarned && (await checkDuplicatePatient())) {
+      return { state: "held", message: "Check whether this patient already exists first." };
+    }
+    if (!$("dup-modal").classList.contains("hidden")) return { state: "held", message: "Answer the question about the existing patient first." };
     const run = saveChain.then(() => doSave());
     saveChain = run.then(() => {}, () => {});
     return run.then((r) => {
@@ -1621,6 +1656,7 @@
     if (!anyDirty()) return true;
     const r = await saveNow();
     if (r.state === "saved" || r.state === "nothing") return true;
+    if (r.state === "held") return false;          // the "may already exist" popup is waiting for an answer
     const ok = purpose === "print"
       ? confirm(r.message + "\n\nPrint anyway? These changes will stay unsaved.")
       : confirm(r.message + "\n\nLeave without saving? These changes will be lost.");
@@ -2333,6 +2369,18 @@
     b.addEventListener("click", () => { cameFrom = from; openRecord(p.patient_id); });
     return b;
   }
+
+  /* ---------- Everything typed is ALL CAPS (except email, passwords, and searches) ---------- */
+  document.addEventListener("input", (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && el.type === "text"))) return;
+    if (el.closest("#login-form")) return;
+    const v = el.value, up = v.toUpperCase();
+    if (v === up) return;
+    const a = el.selectionStart, b = el.selectionEnd;   // keep the cursor where it was
+    el.value = up;
+    try { el.setSelectionRange(a, b); } catch (err) {}
+  }, true);
 
   /* ---------- Manage records: delete a visit or a whole patient ---------- */
   let mgPatient = null, mgSeq = 0, mgTimer = null, mgPending = null;
@@ -3306,22 +3354,38 @@
   });
 
   // Backup: one Excel workbook, one tab per table.
-  const BACKUP_TABLES = ["patients", "prescriptions", "orders", "counts", "lens_prices", "contact_lens_info", "vendors"];
+  // [table, id column]. Supabase hands back at most 1,000 rows per request, so each table is read in pages.
+  const BACKUP_TABLES = [["patients", "patient_id"], ["prescriptions", "prescription_id"], ["orders", "order_id"], ["counts", "count_id"],
+    ["lens_prices", "id"], ["contact_lens_info", "id"], ["vendors", "vendor_id"]];
+  async function fetchAll(table, key, onPage) {
+    const PAGE = 1000, all = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await db.from(table).select("*").order(key).range(from, from + PAGE - 1);
+      if (error) throw new Error(table + ": " + error.message);
+      all.push(...data);
+      if (onPage) onPage(all.length);
+      if (data.length < PAGE) break;
+    }
+    const { count, error } = await db.from(table).select("*", { count: "exact", head: true });
+    if (!error && count !== null && count !== all.length) throw new Error(table + ": got " + all.length + " of " + count);
+    return all;
+  }
   $("backup-btn").addEventListener("click", async () => {
     const btn = $("backup-btn"), note = $("backup-note");
     btn.disabled = true;
     note.textContent = "Gathering data...";
     try {
       const wb = XLSX.utils.book_new();
-      for (const t of BACKUP_TABLES) {
-        const { data, error } = await db.from(t).select("*");
-        if (error) throw new Error(t + ": " + error.message);
-        const sheet = XLSX.utils.json_to_sheet(data || []);
+      const got = [];
+      for (const [t, key] of BACKUP_TABLES) {
+        const data = await fetchAll(t, key, n => { note.textContent = "Gathering " + t + "... " + n.toLocaleString(); });
+        got.push(t + " " + data.length.toLocaleString());
+        const sheet = XLSX.utils.json_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, sheet, t.slice(0, 31));
       }
       const stamp = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(wb, "spec-shoppe-backup-" + stamp + ".xlsx");
-      note.textContent = "Downloaded.";
+      note.textContent = "Downloaded: " + got.slice(0, 3).join(", ") + ".";
       try { sessionStorage.setItem("backupDay", new Date().toDateString()); } catch (e) {}
     } catch (err) {
       note.textContent = "Backup failed. Check the internet connection and try again.";
