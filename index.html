@@ -1032,7 +1032,8 @@
   }
 
   // Tax = 9.1% of Frame + Misc + Lens + Contacts (before the discount). Exam is not taxed.
-  // Total = all charges + exam - discount + tax.
+  // Total = all charges + exam + discount + tax. The discount is entered with its sign:
+  // a negative number (like -20.00) comes off the total; a positive one is added.
   function recalc() {
     const taxable = V_TAXABLE.map(k => toCents(vin[k].value));
     const exam = toCents(vin.exam.value);
@@ -1043,7 +1044,7 @@
     }
     const base = taxable.reduce((a, b) => a + b, 0);
     const tax = Math.round((base * TAX_RATE_PERCENT * 10) / 1000 + 1e-9);   // cents
-    const total = base + exam - disc + tax;
+    const total = base + exam + disc + tax;
     vin.tax.value = (tax / 100).toFixed(2);
     vin.total.value = (total / 100).toFixed(2);
   }
@@ -1748,7 +1749,7 @@
       const exam = Number(vin.exam.value);
       if (exam) items.push({ date: dateISO, desc: "Vision exam", amount: exam });
       const disc = Number(vin.discount.value);
-      if (disc) items.push({ date: dateISO, desc: "Discount", amount: -disc });
+      if (disc) items.push({ date: dateISO, desc: disc < 0 ? "Discount" : "Adjustment", amount: disc });
       const tax = Number(vin.tax.value);
       if (tax) items.push({ date: dateISO, desc: "Sales tax", amount: tax });
     }
