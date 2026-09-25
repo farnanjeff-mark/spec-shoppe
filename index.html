@@ -229,13 +229,14 @@
 
   .vtop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 8px; }
   .vtop .vwho { flex: 1 1 220px; }
-  .taxcalc { display: flex; align-items: center; gap: 8px; background: #eadfd4; border: 1px solid #c4ae99; border-radius: 3px; padding: 4px 10px; font-size: 10pt; }
-  .taxcalc label { font-weight: bold; color: #3d2b1f; margin: 0; }
-  .taxcalc input { width: 90px; padding: 4px 6px; text-align: right; }
-  .taxcalc b { display: inline-block; min-width: 58px; text-align: right; color: #3d2b1f; }
+  #tax-modal .modalbox { max-width: 300px; }
+  .taxrow { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 10px; margin: 0 0 10px; }
+  .taxrow input { text-align: right; }
+  .taxrow b { font-size: 14pt; text-align: right; padding-right: 8px; }
   .vtop .vwho strong { font-size: 13pt; }
   .vtop .vbtns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .vtop .vbtns button.topbtn { width: 140px; }
+  .vtop .vbtns button#tax-btn { width: 80px; }
 
   .pbox { margin-bottom: 8px !important; }
   .pgrid { display: grid; grid-template-columns: 1.4fr 1fr 1.1fr; gap: 6px 18px; align-items: stretch; }
@@ -492,13 +493,8 @@
 
       <div class="vtop">
         <div class="vwho"><strong id="r-title">New patient</strong></div>
-        <div class="taxcalc" title="Scratch math only - nothing here is saved">
-          <label for="tc-amt">Tax calculator</label>
-          <input type="text" id="tc-amt" inputmode="decimal" autocomplete="off" tabindex="-1" placeholder="Amount">
-          <span>Tax <b id="tc-tax">&mdash;</b></span>
-          <span>Total <b id="tc-total">&mdash;</b></span>
-        </div>
         <div class="vbtns">
+          <button type="button" class="primary topbtn" id="tax-btn">Tax</button>
           <button type="button" class="primary topbtn" id="print-btn">Print record</button>
           <button type="button" class="primary topbtn" id="print-rx-btn">Print Rx</button>
           <button type="button" class="primary topbtn" id="receipt-btn">Receipt</button>
@@ -884,6 +880,17 @@
   </div>
 </div>
 
+<div id="tax-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Tax calculator">
+  <div class="modalbox countbox">
+    <div class="modalhead"><h2>Tax calculator</h2><span class="note">Nothing here is saved</span></div>
+    <div class="modalscroll">
+      <label class="taxrow">Amount <input type="text" id="tc-amt" inputmode="decimal" autocomplete="off" placeholder="0.00"></label>
+      <div class="taxrow"><span>Tax (9.1%)</span><b id="tc-tax">&mdash;</b></div>
+      <div class="countbtns"><button type="button" class="secondary" id="tax-close">Close</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="vsp-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="VSP form">
   <div class="modalbox countbox">
     <div class="modalhead"><h2>VSP form</h2><span id="vsp-who" class="note"></span></div>
@@ -1085,6 +1092,7 @@
   function anyDirty() { return pDirty || rDirty || oDirty; }
 
   rform.addEventListener("input", (e) => {
+    if (e.target.id === "tc-amt") return;   // the tax calculator is scratch math, never saved
     const part = e.target.closest("[data-part]");
     if (!part) return;
     const kind = part.dataset.part;
@@ -1103,7 +1111,6 @@
     P_BOOLS.forEach(k => { pin[k].checked = !!(rec && rec[k]); });
     $("f_patient_id").value = rec ? rec.patient_id : "";
     $("r-title").textContent = titleFor(rec);
-    $("tc-amt").value = ""; tcCalc();
     pDirty = false;
   }
   function titleFor(rec) {
@@ -1563,14 +1570,22 @@
   function tcCalc() {
     const t = $("tc-amt").value.replace(/[$,\s]/g, "");
     const n = Number(t);
-    if (t === "" || !Number.isFinite(n)) { $("tc-tax").textContent = "\u2014"; $("tc-total").textContent = "\u2014"; return; }
+    if (t === "" || !Number.isFinite(n)) { $("tc-tax").textContent = "\u2014"; return; }
     const cents = Math.round(n * 100);
     const tax = Math.round((cents * TAX_RATE_PERCENT * 10) / 1000 + 1e-9);
     $("tc-tax").textContent = "$" + (tax / 100).toFixed(2);
-    $("tc-total").textContent = "$" + ((cents + tax) / 100).toFixed(2);
   }
   $("tc-amt").addEventListener("input", tcCalc);
-  $("tc-amt").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); } });
+  const taxModal = $("tax-modal");
+  $("tax-btn").addEventListener("click", () => {
+    $("tc-amt").value = ""; tcCalc();
+    taxModal.classList.remove("hidden");
+    $("tc-amt").focus();
+  });
+  $("tax-close").addEventListener("click", () => taxModal.classList.add("hidden"));
+  $("tc-amt").addEventListener("keydown", (e) => {
+    if (e.key === "Escape") taxModal.classList.add("hidden");
+  });
   rform.addEventListener("submit", (e) => { e.preventDefault(); saveNow(); });
 
   $("r-back-btn").addEventListener("click", async () => {
