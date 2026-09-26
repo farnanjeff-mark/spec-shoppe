@@ -381,6 +381,12 @@
     #print-sheet .rl thead { display: table-header-group; }
     #print-sheet .rl tr { page-break-inside: avoid; }
     #print-sheet .slip { font-size: 10pt; position: relative; }
+    /* Dymo 30323 shipping label: 4" x 2-1/8" */
+    #print-sheet .dymo { width: 4in; height: 2.125in; box-sizing: border-box; padding: 0.12in 0.18in; overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif; color: #000; page-break-after: avoid; }
+    #print-sheet .dymo .from { font-size: 8.5pt; line-height: 1.2; border-bottom: 1px solid #000; padding-bottom: 0.05in; }
+    #print-sheet .dymo .from b { font-size: 10.5pt; }
+    #print-sheet .dymo .to { padding: 0.12in 0 0 0.35in; font-size: 14pt; line-height: 1.25; font-weight: bold; }
     #print-sheet svg.formpage { display: block; width: 8.5in; height: 10.95in; }
     #print-sheet .slip .ssig { position: absolute; left: 0; bottom: 0.2in; width: 3.4in; }
     #print-sheet .slip .simg { display: block; height: 0.5in; width: 2.38in; margin: 0 0 0.02in 0.1in; }
@@ -520,6 +526,7 @@
           <button type="button" class="primary topbtn" id="print-btn">Print record</button>
           <button type="button" class="primary topbtn" id="print-rx-btn">Print Rx</button>
           <button type="button" class="primary topbtn" id="receipt-btn">Receipt</button>
+          <button type="button" class="primary topbtn" id="dymo-btn">Print Dymo</button>
           <button type="button" class="primary topbtn" id="r-back-btn">Main menu</button>
           <span class="rstatus" id="r-status" role="status"></span>
           <span class="error" id="r-error" role="alert"></span>
@@ -2381,6 +2388,26 @@
     el.value = up;
     try { el.setSelectionRange(a, b); } catch (err) {}
   }, true);
+
+  /* ---------- Print Dymo: shipping label (Dymo 30323, 4" x 2-1/8") with Spec Shoppe at the top ---------- */
+  $("dymo-btn").addEventListener("click", async () => {
+    const v = (el) => el.value.trim().toUpperCase();
+    const name = [v(pin.first_name), v(pin.last_name)].filter(Boolean).join(" ");
+    const cityLine = [v(pin.city), [v(pin.state), v(pin.zip_code)].filter(Boolean).join(" ")].filter(Boolean).join(", ").replace(", ", " ");
+    if (!name || !v(pin.address) || !v(pin.city)) {
+      $("r-error").textContent = "Fill in the name, address, and city first, then click Print Dymo.";
+      return;
+    }
+    const st = document.createElement("style");
+    st.textContent = "@media print { @page { size: 4in 2.125in; margin: 0; } }";
+    document.head.appendChild(st);
+    window.addEventListener("afterprint", function done() { window.removeEventListener("afterprint", done); st.remove(); });
+    $("print-sheet").innerHTML =
+      '<div class="dymo"><div class="from"><b>SPEC SHOPPE</b><br>1713 S. MAIN<br>MARYVILLE, MO 64468</div>' +
+      '<div class="to">' + esc(name) + "<br>" + esc(v(pin.address)) + "<br>" + esc(cityLine) + "</div></div>";
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    window.print();
+  });
 
   /* ---------- Manage records: delete a visit or a whole patient ---------- */
   let mgPatient = null, mgSeq = 0, mgTimer = null, mgPending = null;
