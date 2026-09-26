@@ -732,6 +732,7 @@
       <div><h2 id="vendor-title">New vendor</h2><span class="note" id="vendor-access"></span></div>
       <div class="vbtns2">
         <button type="button" class="secondary" id="vendor-back">Back to vendors</button>
+        <button type="button" class="primary" id="vendor-dymo">Print Dymo</button>
         <button type="button" class="signout hidden" id="vendor-remove">Remove vendor</button>
         <span class="rstatus" id="vendor-status" role="status"></span>
         <span class="error" id="vendor-error" role="alert"></span>
@@ -2393,23 +2394,33 @@
   }, true);
 
   /* ---------- Print Dymo: shipping label (Dymo 30323, 4" x 2-1/8") with Spec Shoppe at the top ---------- */
-  $("dymo-btn").addEventListener("click", async () => {
-    const v = (el) => el.value.trim().toUpperCase();
-    const name = [v(pin.first_name), v(pin.last_name)].filter(Boolean).join(" ");
-    const cityLine = [v(pin.city), [v(pin.state), v(pin.zip_code)].filter(Boolean).join(" ")].filter(Boolean).join(", ").replace(", ", " ");
-    if (!name || !v(pin.address) || !v(pin.city)) {
-      $("r-error").textContent = "Fill in the name, address, and city first, then click Print Dymo.";
-      return;
-    }
+  async function printDymo(toLines, errEl) {
     const st = document.createElement("style");
     st.textContent = "@media print { @page { size: 2.125in 4in; margin: 0; } }";
     document.head.appendChild(st);
     window.addEventListener("afterprint", function done() { window.removeEventListener("afterprint", done); st.remove(); });
     $("print-sheet").innerHTML =
       '<div class="dymopage"><div class="dymo"><div class="from"><b>SPEC SHOPPE</b><br>1713 S. MAIN<br>MARYVILLE, MO 64468</div>' +
-      '<div class="to">' + esc(name) + "<br>" + esc(v(pin.address)) + "<br>" + esc(cityLine) + "</div></div></div>";
+      '<div class="to">' + toLines.map(esc).join("<br>") + "</div></div></div>";
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     window.print();
+  }
+  const upv = (el) => el.value.trim().toUpperCase();
+  const cityStateZip = (c, s, z) => [upv(c), upv(s), upv(z)].filter(Boolean).join(" ");
+  $("dymo-btn").addEventListener("click", () => {
+    const name = [upv(pin.first_name), upv(pin.last_name)].filter(Boolean).join(" ");
+    if (!name || !upv(pin.address) || !upv(pin.city)) {
+      $("r-error").textContent = "Fill in the name, address, and city first, then click Print Dymo."; return;
+    }
+    printDymo([name, upv(pin.address), cityStateZip(pin.city, pin.state, pin.zip_code)]);
+  });
+  $("vendor-dymo").addEventListener("click", () => {
+    const co = $("vd_company_name"), ad = $("vd_address"), ci = $("vd_city");
+    if (!upv(co) || !upv(ad) || !upv(ci)) {
+      $("vendor-error").textContent = "Fill in the company name, address, and city first, then click Print Dymo."; return;
+    }
+    $("vendor-error").textContent = "";
+    printDymo([upv(co), upv(ad), cityStateZip(ci, $("vd_state"), $("vd_zip_code"))]);
   });
 
   /* ---------- Manage records: delete a visit or a whole patient ---------- */
