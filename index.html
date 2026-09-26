@@ -382,11 +382,14 @@
     #print-sheet .rl tr { page-break-inside: avoid; }
     #print-sheet .slip { font-size: 10pt; position: relative; }
     /* Dymo 30323 shipping label: 4" x 2-1/8" */
-    #print-sheet .dymo { width: 4in; height: 2.125in; box-sizing: border-box; padding: 0.12in 0.18in; overflow: hidden;
-      font-family: Arial, Helvetica, sans-serif; color: #000; page-break-after: avoid; }
-    #print-sheet .dymo .from { font-size: 8.5pt; line-height: 1.2; border-bottom: 1px solid #000; padding-bottom: 0.05in; }
-    #print-sheet .dymo .from b { font-size: 10.5pt; }
-    #print-sheet .dymo .to { padding: 0.12in 0 0 0.35in; font-size: 14pt; line-height: 1.25; font-weight: bold; }
+    /* The Dymo feeds the label narrow side first, so the page is 2-1/8" wide x 4" tall and the label is turned sideways on it */
+    #print-sheet .dymopage { width: 2.125in; height: 4in; position: relative; overflow: hidden; page-break-after: avoid; }
+    #print-sheet .dymo { position: absolute; top: 0; left: 2.125in; transform-origin: top left; transform: rotate(90deg);
+      width: 4in; height: 2.125in; box-sizing: border-box; padding: 0.14in 0.2in; overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif; color: #000; }
+    #print-sheet .dymo .from { font-size: 9pt; line-height: 1.2; border-bottom: 1.5px solid #000; padding-bottom: 0.06in; }
+    #print-sheet .dymo .from b { font-size: 11pt; }
+    #print-sheet .dymo .to { padding: 0.16in 0 0 0.3in; font-size: 16pt; line-height: 1.25; font-weight: bold; }
     #print-sheet svg.formpage { display: block; width: 8.5in; height: 10.95in; }
     #print-sheet .slip .ssig { position: absolute; left: 0; bottom: 0.2in; width: 3.4in; }
     #print-sheet .slip .simg { display: block; height: 0.5in; width: 2.38in; margin: 0 0 0.02in 0.1in; }
@@ -2399,12 +2402,12 @@
       return;
     }
     const st = document.createElement("style");
-    st.textContent = "@media print { @page { size: 4in 2.125in; margin: 0; } }";
+    st.textContent = "@media print { @page { size: 2.125in 4in; margin: 0; } }";
     document.head.appendChild(st);
     window.addEventListener("afterprint", function done() { window.removeEventListener("afterprint", done); st.remove(); });
     $("print-sheet").innerHTML =
-      '<div class="dymo"><div class="from"><b>SPEC SHOPPE</b><br>1713 S. MAIN<br>MARYVILLE, MO 64468</div>' +
-      '<div class="to">' + esc(name) + "<br>" + esc(v(pin.address)) + "<br>" + esc(cityLine) + "</div></div>";
+      '<div class="dymopage"><div class="dymo"><div class="from"><b>SPEC SHOPPE</b><br>1713 S. MAIN<br>MARYVILLE, MO 64468</div>' +
+      '<div class="to">' + esc(name) + "<br>" + esc(v(pin.address)) + "<br>" + esc(cityLine) + "</div></div></div>";
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     window.print();
   });
