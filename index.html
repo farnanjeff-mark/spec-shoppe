@@ -276,9 +276,12 @@
     border: 1px solid var(--line); border-left: 5px solid #6B7043;
     background: #d6d9c1; border-radius: 3px;   /* a darker shade of the Contacts Rx gray-green */
   }
-  .cgroup.claim { margin-bottom: 0; background: #eadfd4; }   /* light coffee, same as the Tax and Total boxes */
+  .cgroup.claim { margin-bottom: 0; background: #dbe6f4; border-left-color: var(--blue); }   /* light blue, same as the Tax and Total boxes */
   .cgtitle { font-weight: bold; margin: 0 0 3px; }
-  .cgroup.checkbox-ins .cgtitle, .cgroup.claim .cgtitle { color: #4f5331; }
+  .cgroup.checkbox-ins .cgtitle { color: #4f5331; }
+  .cgroup.claim .cgtitle { color: var(--blue); }
+  /* Tax and Total boxes (visit and order lines): light blue */
+  #v_tax, #v_total, .orow input[readonly] { background: #dbe6f4; border-color: #9fb6d6; color: #16365f; }
   .datefiled { max-width: 160px; margin-top: 2px; }
 
   /* Patient box: all three columns line up top and bottom, with the extra space spread evenly */
