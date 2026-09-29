@@ -743,7 +743,7 @@
     <p class="note" id="vendor-note"></p>
     <div class="results" id="vendor-results"></div>
     <p><button type="button" class="secondary hidden" id="vendor-more">Show more</button></p>
-    <button type="button" class="secondary" data-go="menu">Back to main menu</button>
+    <button type="button" class="primary" data-go="menu">Back to main menu</button>
   </section>
 
   <!-- Vendors: one vendor -->
@@ -967,7 +967,7 @@
       <table class="crtable">
         <thead><tr><th>Date</th><th>Description</th><th class="amt">Price</th></tr></thead>
         <tbody id="cr-rows"></tbody>
-        <tfoot><tr><td colspan="2" class="crtotlab">Total paid</td><td class="amt"><b id="cr-total">$0.00</b></td></tr></tfoot>
+        <tfoot><tr><td colspan="2" class="crtotlab">Balance Due</td><td class="amt"><b id="cr-total">$0.00</b></td></tr></tfoot>
       </table>
       <p class="error" id="cr-error" role="alert"></p>
       <div class="countbtns">
@@ -2048,7 +2048,7 @@
       '<div class="rpatient"><div><b>' + esc($("cr-name").textContent) + "</b></div><div class=\"raddr\">" + esc($("cr-addr").textContent) + "</div>" +
         (dob ? '<div class="raddr">' + esc(dob) + "</div>" : "") + "</div>" +
       '<table><thead><tr><th>Date</th><th>Description</th><th class="amt">Amount</th></tr></thead><tbody>' + rows +
-      '</tbody><tfoot><tr><td colspan="2" class="rtotlab">Total paid</td><td class="amt rtotamt">' + crMoney(crTotal()) + "</td></tr></tfoot></table>" +
+      '</tbody><tfoot><tr><td colspan="2" class="rtotlab">Balance Due</td><td class="amt rtotamt">' + crMoney(crTotal()) + "</td></tr></tfoot></table>" +
       "</div>";
     $("cr-modal").classList.add("hidden");
     window.print();
