@@ -276,7 +276,7 @@
     border: 1px solid var(--line); border-left: 5px solid #6B7043;
     background: #d6d9c1; border-radius: 3px;   /* a darker shade of the Contacts Rx gray-green */
   }
-  .cgroup.claim { margin-bottom: 0; background: #eadfd4; }   /* light coffee, same as the Tax and Total boxes */
+  .cgroup.claim { margin-bottom: 0; background: #d6d9c1; }   /* dark olive, same as the Insurance box and Pricing */
   .cgtitle { font-weight: bold; margin: 0 0 3px; }
   .cgroup.checkbox-ins .cgtitle, .cgroup.claim .cgtitle { color: #4f5331; }
   .datefiled { max-width: 160px; margin-top: 2px; }
@@ -373,6 +373,10 @@
     #print-sheet td.plab { background: #eee; font-weight: bold; width: 46pt; }
     #print-sheet .row { display: flex; gap: 8pt; margin-top: 5pt; }
     #print-sheet .h { font-weight: bold; font-size: 9pt; margin: 0 0 2pt; }
+    #print-sheet td.jb { width: 30pt; border: 1.2pt solid #000; background: #fff; }
+    #print-sheet th.jb { width: 30pt; background: #fff; border-color: #fff #888 #000 #fff; border-bottom: 1.2pt solid #000; font-size: 7pt; white-space: nowrap; padding: 2pt 1pt; }
+    #print-sheet table.office { table-layout: fixed; }
+    #print-sheet table.office td { height: 12pt; }
     #print-sheet .notes { border: 0.6pt solid #888; padding: 2pt 3pt; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     #print-sheet .rl h3 { font-size: 13pt; margin: 0 0 6pt; }
     #print-sheet .rl table { border-collapse: collapse; width: 100%; }
@@ -569,12 +573,12 @@
             <div class="cgroup ins">
             <label class="lrow"><span class="tag">Birthday</span><input type="text" id="f_birthday" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off" data-kind="birth"></label>
             <label class="lrow"><span class="tag">Medicaid number</span><input type="text" id="f_medical_no" autocomplete="off"></label>
+            <label class="lrow"><span class="tag">Medicare number</span><input type="text" id="f_medicare_number" autocomplete="off"></label>
             <label class="lrow"><span class="tag">VSP number</span><input type="text" id="f_vsp_number" autocomplete="off"></label>
             <label class="lrow"><span class="tag">EyeMed number</span><input type="text" id="f_ecpa_number" autocomplete="off"></label>
             <label class="lrow"><span class="tag">NVA number</span><input type="text" id="f_nva_number" autocomplete="off"></label>
             <label class="lrow"><span class="tag">Insurance holder</span><input type="text" id="f_insurance_holder" autocomplete="off"></label>
-            <!-- Two open spots (were Occupation and Employer), kept for future fields -->
-            <label class="lrow spacer" aria-hidden="true" style="visibility: hidden;"><span class="tag">&nbsp;</span><input type="text" tabindex="-1" disabled></label>
+            <!-- One open spot kept for a future field -->
             <label class="lrow spacer" aria-hidden="true" style="visibility: hidden;"><span class="tag">&nbsp;</span><input type="text" tabindex="-1" disabled></label>
             </div>
           </div>
@@ -713,7 +717,10 @@
 
   <!-- Vendors: list and search -->
   <section id="view-vendors" class="hidden">
-    <h2>Vendors</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <h2>Vendors</h2>
+      <button type="button" class="primary" data-go="menu">Main menu</button>
+    </div>
     <div class="searchrow">
       <label>Company name, sales rep, or notes
         <input type="search" id="vendor-search" autocomplete="off">
@@ -1079,7 +1086,7 @@
 
   /* ---------- Patient fields ---------- */
   const P_TEXT = ["last_name", "first_name", "address", "city", "state", "zip_code",
-    "home_phone", "work_phone", "cell_phone", "email", "medical_no",
+    "home_phone", "work_phone", "cell_phone", "email", "medical_no", "medicare_number",
     "insurance_holder", "vsp_number", "ecpa_number", "nva_number"];
   const P_DATES = ["birthday", "date_filed"];
   const P_BOOLS = ["ck_vsp", "ck_eye_med", "ck_xix", "ck_home_state_health", "ck_nva", "ck_abbey_convent",
@@ -1734,7 +1741,7 @@
   const FIELD_ORDER = [
     "f_last_name", "f_first_name", "f_address", "f_city", "f_state", "f_zip_code",
     "f_home_phone", "f_work_phone", "f_cell_phone", "f_email",
-    "f_birthday", "f_medical_no", "f_vsp_number", "f_ecpa_number", "f_nva_number",
+    "f_birthday", "f_medical_no", "f_medicare_number", "f_vsp_number", "f_ecpa_number", "f_nva_number",
     "f_insurance_holder",
     "v_service_date", "v_doctor", "v_recall_date",
     "v_rsph", "v_rcyl", "v_raxis", "v_radd",
@@ -1772,7 +1779,7 @@
   });
 
   /* ---------- Printing the record (top half of the sheet) ---------- */
-  const MAX_PRINT_ORDERS = 6;   // more than this would run past the fold
+  const MAX_PRINT_ORDERS = 3;   // more than this would run past the fold (the Office use boxes sit below)
   const esc = (t) => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   function moneyOut(str) {
     const c = toCents(str);
@@ -1785,10 +1792,14 @@
     const cityLine = [val(pin.city), [val(pin.state), val(pin.zip_code)].filter(Boolean).join(" ")].filter(Boolean).join(", ");
     const addr = esc([val(pin.address), cityLine].filter(Boolean).join(", "));
     const visit = esc(val(vin.service_date)) + (val(vin.doctor) ? " &nbsp;|&nbsp; " + esc(val(vin.doctor)) : "");
+    // Medicaid or Home State Health patients: their number prints next to the name, same size
+    const medNo = (pin.ck_xix.checked || pin.ck_home_state_health.checked) && val(pin.medical_no)
+      ? " &nbsp;&nbsp; MEDICAID # " + esc(val(pin.medical_no)) : "";
+    const dobTop = val(pin.birthday) ? " &nbsp;&nbsp; DOB " + esc(val(pin.birthday)) : "";
 
-    const rxTable = (head, rows, leftCols) =>
-      "<table><tr><th></th>" + head.map((h, i) => "<th" + (leftCols.includes(i) ? ' class="l"' : "") + ">" + h + "</th>").join("") + "</tr>" +
-      rows.map(([label, names]) => '<tr><td class="l lab">' + label + "</td>" +
+    const rxTable = (head, rows, leftCols, boxLabel) =>
+      '<table><tr><th class="jb">' + (boxLabel || "") + "</th><th></th>" + head.map((h, i) => "<th" + (leftCols.includes(i) ? ' class="l"' : "") + ">" + h + "</th>").join("") + "</tr>" +
+      rows.map(([label, names], ri) => "<tr>" + (ri === 0 ? '<td class="jb" rowspan="' + rows.length + '"></td>' : "") + '<td class="l lab">' + label + "</td>" +
         names.map((n, i) => "<td" + (leftCols.includes(i) ? ' class="l"' : "") + ">" + esc(vin[n].value) + "</td>").join("") + "</tr>").join("") +
       "</table>";
 
@@ -1800,17 +1811,19 @@
     const orders = shown.map(r =>
       '<tr><td class="l">' + esc(r.date.value) + '</td><td class="l">' + esc(r.note.value) + '</td><td class="r">' +
       moneyOut(r.price.value) + '</td><td class="r">' + moneyOut(r.tax.value) + '</td><td class="r">' + moneyOut(r.total.value) + "</td></tr>").join("");
-    const more = lines.length > shown.length
-      ? '<div class="k" style="text-align:right;margin-top:1pt">+' + (lines.length - shown.length) + " more line" + (lines.length - shown.length === 1 ? "" : "s") + " not shown</div>" : "";
+    // Extra lines are noted beside the Orders title so the Office use boxes still fit above the fold
+    const moreN = lines.length - shown.length;
+    const moreTag = moreN > 0 ? ' <span class="k" style="font-weight:normal">(+' + moreN + " more line" + (moreN === 1 ? "" : "s") + " not shown)</span>" : "";
+    const more = "";
 
     return '<div class="half">' +
       '<div class="hdr"><span class="shop">Spec Shoppe</span><span>Visit ' + visit + "</span></div>" +
-      '<div class="pat"><div><div class="name">' + name + "</div><div>" + addr + "</div></div>" +
+      '<div class="pat"><div><div class="name">' + name + medNo + dobTop + "</div><div>" + addr + "</div></div>" +
       '<div style="text-align:right"><span class="k">Home</span> ' + esc(val(pin.home_phone)) + ' &nbsp;&nbsp; <span class="k">Work</span> ' + esc(val(pin.work_phone)) +
       ' &nbsp;&nbsp; <span class="k">Cell</span> ' + esc(val(pin.cell_phone)) + '<br><span class="k">Email</span> ' + esc(val(pin.email)) + "</div></div>" +
       '<div class="row" style="margin-top:2pt">' +
         '<div style="flex:1.45"><div class="h">Glasses Rx</div>' + rxTable(GLASSES_HEAD, GLASSES_ROWS, []) + "</div>" +
-        '<div style="flex:1"><div class="h">Contacts Rx</div>' + rxTable(CONTACT_HEAD, CONTACT_ROWS, [0]) + "</div></div>" +
+        '<div style="flex:1"><div class="h">Contacts Rx</div>' + rxTable(CONTACT_HEAD, CONTACT_ROWS, [0], "Order #") + "</div></div>" +
       '<div class="row">' +
         '<div style="flex:1.45" class="det"><div class="h">Details</div>' +
           '<table><tr><td class="l plab">Lens</td><td class="l">' + esc(val(vin.lens_type)) + '</td></tr>' +
@@ -1821,10 +1834,14 @@
           "<tr>" + price("Misc", "misc_chg") + price("Adjustment", "discount") + "</tr>" +
           "<tr>" + price("Frame", "frame_chg") + price("Tax", "tax") + "</tr>" +
           "<tr>" + price("Contacts", "contacts_chg") + price("Total", "total", true) + "</tr></table></div></div>" +
-      '<div style="margin-top:4pt"><div class="h">Notes</div><div class="notes">' + esc(vin.notes.value) + "</div></div>" +
-      '<div style="margin-top:5pt"><div class="h">Orders</div>' +
+      '<div style="margin-top:2pt"><div class="h">Notes</div><div class="notes">' + esc(vin.notes.value) + "</div></div>" +
+      '<div style="margin-top:3pt"><div class="h">Orders' + moreTag + "</div>" +
         '<table><tr><th class="l" style="width:48pt">Date</th><th class="l">Item</th><th style="width:48pt">Price</th><th style="width:44pt">Tax</th><th style="width:48pt">Total</th></tr>' +
-        orders + "</table>" + more + "</div></div>";
+        orders + "</table>" + more + "</div>" +
+      '<div style="margin-top:3pt"><div class="h">Office use</div><table class="office"><colgroup><col style="width:13%"><col style="width:20%"><col style="width:10%"><col style="width:17%"><col style="width:22%"><col style="width:18%"></colgroup>' +
+        '<tr><td class="l plab">Date Paid</td><td></td><td class="l plab">Amount</td><td></td><td class="l plab">Balance Due at Delivery</td><td></td></tr>' +
+        '<tr><td class="l plab">Parts ordered</td><td colspan="3"></td><td class="l plab">Frame ordered</td><td></td></tr></table></div>' +
+      "</div>";
   }
 
   /* ---------- Printing just the prescription (for the patient) ---------- */
@@ -2549,9 +2566,9 @@
     { group: "ins", col: "ck_eye_med", claim: true, label: "Eye Med", button: "Find Eye Med patients", cls: "" },
     { group: "ins", col: "ck_xix", claim: true, label: "Medicaid", button: "Find Medicaid patients", cls: "" },
     { group: "ins", col: "ck_home_state_health", claim: true, label: "Home State Health", button: "Find Home State Health patients", cls: "" },
-    { group: "ins", col: "ck_nva", label: "NVA", button: "Find NVA patients", cls: "" },
-    { group: "bill", col: "ck_abbey_convent", label: "Bill Abbey/Convent", button: "Find Abbey/Convent patients", cls: "" },
-    { group: "bill", col: "ck_lions", label: "Bill Lions Club", button: "Find Lions Club patients", cls: "" },
+    { group: "ins", col: "ck_nva", claim: true, label: "NVA", button: "Find NVA patients", cls: "" },
+    { group: "bill", col: "ck_abbey_convent", claim: true, label: "Bill Abbey/Convent", button: "Find Abbey/Convent patients", cls: "" },
+    { group: "bill", col: "ck_lions", claim: true, label: "Bill Lions Club", button: "Find Lions Club patients", cls: "" },
     { group: "ins", col: "ck_other_ins", claim: true, label: "Bill Other Ins", button: "Find Other Ins patients", cls: "" },
     { group: "bill", col: "ck_pt_took_frames", label: "Pt Took Frame", button: "Find Pt Took Frame", cls: "claim" },
     { group: "bill", col: "ck_payments", label: "Payments", button: "Find Payments", cls: "claim" }
