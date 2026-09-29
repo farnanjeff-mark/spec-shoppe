@@ -120,6 +120,18 @@
   /* Main menu sections: light tan panels */
   .menupanel { background: #f5f0e6; border: 1px solid #e6dcc8; border-radius: var(--r); padding: 14px; margin: 0 0 20px; }
   .menupanel .menu { margin: 0; }
+  .crpat { display: grid; gap: 2px; margin: 0 0 10px; }
+  .crpat b { font-size: 12pt; }
+  .crpat span { color: var(--muted); }
+  .crtable { width: 100%; border-collapse: collapse; }
+  .crtable th { text-align: left; font-size: 9.5pt; color: var(--muted); padding: 2px 4px; }
+  .crtable td { padding: 3px 4px; }
+  .crtable .amt { text-align: right; }
+  .crtable td:nth-child(1) input { width: 100px; }
+  .crtable td:nth-child(2) input { width: 100%; }
+  .crtable td:nth-child(3) input { width: 100px; text-align: right; }
+  .crtable tfoot td { border-top: 2px solid var(--line); padding-top: 6px; font-size: 12pt; }
+  .crtotlab { text-align: right; font-weight: bold; }
   .menu button.manage .micon { background: rgba(143, 42, 34, 0.1); }
   button.danger { background: #8f2a22; color: var(--white); border: 1px solid #8f2a22; border-radius: 3px; padding: 8px 16px; font-weight: bold; cursor: pointer; }
   button.danger:hover { background: #6e1f19; }
@@ -533,6 +545,7 @@
           <button type="button" class="primary topbtn" id="print-btn">Print record</button>
           <button type="button" class="primary topbtn" id="print-rx-btn">Print Rx</button>
           <button type="button" class="primary topbtn" id="receipt-btn">Receipt</button>
+          <button type="button" class="primary topbtn" id="custom-receipt-btn">Custom Receipt</button>
           <button type="button" class="primary topbtn" id="dymo-btn">Print Dymo</button>
           <button type="button" class="primary topbtn" id="r-back-btn">Main menu</button>
           <span class="rstatus" id="r-status" role="status"></span>
@@ -941,6 +954,25 @@
       <div class="countbtns">
         <button type="button" class="primary" id="receipt-ok">Print</button>
         <button type="button" class="secondary" id="receipt-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="cr-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Custom receipt">
+  <div class="modalbox countbox" style="max-width: 680px;">
+    <div class="modalhead"><h2>Custom receipt</h2><span class="note">Nothing here is saved</span></div>
+    <div class="modalscroll">
+      <div class="crpat"><b id="cr-name"></b><span id="cr-addr"></span><span id="cr-dob"></span></div>
+      <table class="crtable">
+        <thead><tr><th>Date</th><th>Description</th><th class="amt">Price</th></tr></thead>
+        <tbody id="cr-rows"></tbody>
+        <tfoot><tr><td colspan="2" class="crtotlab">Total paid</td><td class="amt"><b id="cr-total">$0.00</b></td></tr></tfoot>
+      </table>
+      <p class="error" id="cr-error" role="alert"></p>
+      <div class="countbtns">
+        <button type="button" class="primary" id="cr-print">Print</button>
+        <button type="button" class="secondary" id="cr-cancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -1956,6 +1988,69 @@
     if (!html) { $("receipt-error").textContent = "Nothing happened on that date for this visit."; return; }
     $("receipt-modal").classList.add("hidden");
     $("print-sheet").innerHTML = html;
+    window.print();
+  });
+
+  /* ---------- Custom receipt: typed on the spot, looks like the regular receipt, nothing saved ---------- */
+  const CR_LINES = 6;
+  function crTotal() {
+    let cents = 0;
+    $("cr-rows").querySelectorAll("input.crprice").forEach(i => { const n = Number(i.value.replace(/[$,\s]/g, "")); if (i.value.trim() && Number.isFinite(n)) cents += Math.round(n * 100); });
+    return cents;
+  }
+  const crMoney = (c) => (c < 0 ? "\u2212$" : "$") + (Math.abs(c) / 100).toFixed(2);
+  $("custom-receipt-btn").addEventListener("click", () => {
+    const val = (el) => el.value.trim();
+    $("cr-name").textContent = [val(pin.first_name), val(pin.last_name)].filter(Boolean).join(" ") || "(no name)";
+    const cityLine = [val(pin.city), [val(pin.state), val(pin.zip_code)].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    $("cr-addr").textContent = [val(pin.address), cityLine].filter(Boolean).join(", ");
+    $("cr-dob").textContent = val(pin.birthday) ? "DOB " + val(pin.birthday) : "";
+    const tb = $("cr-rows"); tb.innerHTML = "";
+    for (let i = 0; i < CR_LINES; i++) {
+      tb.insertAdjacentHTML("beforeend",
+        '<tr><td><input type="text" class="dateinput crdate" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></td>' +
+        '<td><input type="text" class="crdesc" autocomplete="off"></td>' +
+        '<td><input type="text" class="crprice" inputmode="decimal" autocomplete="off" placeholder="0.00"></td></tr>');
+    }
+    $("cr-total").textContent = "$0.00"; $("cr-error").textContent = "";
+    $("cr-modal").classList.remove("hidden");
+    tb.querySelector("input").focus();
+  });
+  $("cr-rows").addEventListener("input", () => { $("cr-total").textContent = crMoney(crTotal()); });
+  $("cr-cancel").addEventListener("click", () => $("cr-modal").classList.add("hidden"));
+  $("cr-modal").onkeydown = (e) => {
+    if (e.key === "Escape") { $("cr-modal").classList.add("hidden"); return; }
+    // Enter moves to the next box (Date, Description, Price, then the next line); after the last box it goes to Print
+    if (e.key === "Enter" && e.target.tagName === "INPUT") {
+      e.preventDefault();
+      const boxes = Array.from($("cr-rows").querySelectorAll("input"));
+      const i = boxes.indexOf(e.target);
+      (i >= 0 && i < boxes.length - 1 ? boxes[i + 1] : $("cr-print")).focus();
+    }
+  };
+  $("cr-print").addEventListener("click", () => {
+    const lines = [];
+    for (const tr of $("cr-rows").querySelectorAll("tr")) {
+      const [d, desc, pr] = tr.querySelectorAll("input");
+      if (!d.value.trim() && !desc.value.trim() && !pr.value.trim()) continue;
+      const iso = readDate(d);
+      if (iso === null) { $("cr-error").textContent = "Enter each date as six digits, like 01/02/27."; d.focus(); return; }
+      const n = Number(pr.value.replace(/[$,\s]/g, ""));
+      if (pr.value.trim() && !Number.isFinite(n)) { $("cr-error").textContent = "A price isn't a number."; pr.focus(); return; }
+      lines.push({ date: iso ? fmtDate(iso) : "", desc: desc.value.trim(), cents: pr.value.trim() ? Math.round(n * 100) : null });
+    }
+    if (!lines.length) { $("cr-error").textContent = "Fill in at least one line."; return; }
+    const rows = lines.map(l => "<tr><td>" + esc(l.date) + "</td><td>" + esc(l.desc) + '</td><td class="amt">' + (l.cents === null ? "" : crMoney(l.cents)) + "</td></tr>").join("");
+    const dob = $("cr-dob").textContent;
+    $("print-sheet").innerHTML = '<div class="receipt">' +
+      '<div class="rhead"><div><div class="rshop">' + esc(SHOP_NAME) + '</div><div class="rshopaddr">' + SHOP_ADDRESS.map(esc).join("<br>") + "</div></div>" +
+        '<div><div class="rtitle">RECEIPT</div><div class="rdate">Date: <b>' + esc(fmtDate(todayISO())) + "</b></div></div></div>" +
+      '<div class="rpatient"><div><b>' + esc($("cr-name").textContent) + "</b></div><div class=\"raddr\">" + esc($("cr-addr").textContent) + "</div>" +
+        (dob ? '<div class="raddr">' + esc(dob) + "</div>" : "") + "</div>" +
+      '<table><thead><tr><th>Date</th><th>Description</th><th class="amt">Amount</th></tr></thead><tbody>' + rows +
+      '</tbody><tfoot><tr><td colspan="2" class="rtotlab">Total paid</td><td class="amt rtotamt">' + crMoney(crTotal()) + "</td></tr></tfoot></table>" +
+      "</div>";
+    $("cr-modal").classList.add("hidden");
     window.print();
   });
 
