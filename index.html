@@ -370,7 +370,7 @@
     body > *:not(#print-sheet) { display: none !important; }
     #print-sheet { display: block; font: 9pt/1.25 Arial, Helvetica, sans-serif; color: #000; }
     #print-sheet, #print-sheet * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    #print-sheet .half { height: 5in; overflow: hidden; }
+    #print-sheet .half { min-height: 5in; }   /* grows past the fold when a visit has many order lines */
     #print-sheet .hdr { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1.5pt solid #8f2a22; padding-bottom: 2pt; }
     #print-sheet .shop { font-size: 15pt; font-weight: bold; color: #8f2a22; }
     #print-sheet .pat { display: flex; justify-content: space-between; margin: 5pt 0 4pt; }
@@ -1811,7 +1811,7 @@
   });
 
   /* ---------- Printing the record (top half of the sheet) ---------- */
-  const MAX_PRINT_ORDERS = 3;   // more than this would run past the fold (the Office use boxes sit below)
+  const MAX_PRINT_ORDERS = Infinity;   // print every order line, even if it runs past the fold
   const esc = (t) => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   function moneyOut(str) {
     const c = toCents(str);
