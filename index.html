@@ -2223,8 +2223,9 @@
     const { p, rx } = d;
     const s = [];
     // Box 1 and 1a
-    if (kind === "medicare") { s.push(svgX(0.37, 1.54)); s.push(svgText(5.25, 1.61, up(p.medical_no))); }
+    if (kind === "medicare") s.push(svgX(0.37, 1.54));
     else s.push(svgX(4.745, 1.545));
+    s.push(svgText(5.25, 1.61, up(p.medicare_number)));   // box 1a: the patient's Medicare number
     // Box 2, 3
     s.push(svgText(0.435, 1.915, up(p.last_name)), svgText(1.94, 1.915, up(p.first_name)));
     s.push(svgText(3.39, 1.915, fmtDate(p.birthday)));
