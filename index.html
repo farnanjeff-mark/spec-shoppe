@@ -385,6 +385,7 @@
     #print-sheet td.plab { background: #eee; font-weight: bold; width: 46pt; }
     #print-sheet .row { display: flex; gap: 8pt; margin-top: 5pt; }
     #print-sheet .h { font-weight: bold; font-size: 9pt; margin: 0 0 2pt; }
+    #print-sheet tr.newest td { background: #FFD84D !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     #print-sheet td.jb { width: 30pt; border: 1.2pt solid #000; background: #fff; }
     #print-sheet th.jb { width: 30pt; background: #fff; border-color: #fff #888 #000 #fff; border-bottom: 1.2pt solid #000; font-size: 7pt; white-space: nowrap; padding: 2pt 1pt; }
     #print-sheet table.office { table-layout: fixed; }
@@ -1887,8 +1888,9 @@
 
     const lines = orderRows.filter(rowHasContent);
     const shown = lines.slice(0, MAX_PRINT_ORDERS);
-    const orders = shown.map(r =>
-      '<tr><td class="l">' + esc(r.date.value) + '</td><td class="l">' + esc(r.note.value) + '</td><td class="r">' +
+    // The newest order line (the last one) prints highlighted: yellow on a color printer, pale gray in black and white
+    const orders = shown.map((r, i) =>
+      "<tr" + (i === lines.length - 1 && lines.length > 1 ? ' class="newest"' : "") + '><td class="l">' + esc(r.date.value) + '</td><td class="l">' + esc(r.note.value) + '</td><td class="r">' +
       moneyOut(r.price.value) + '</td><td class="r">' + moneyOut(r.tax.value) + '</td><td class="r">' + moneyOut(r.total.value) + "</td></tr>").join("");
     // Extra lines are noted beside the Orders title so the Office use boxes still fit above the fold
     const moreN = lines.length - shown.length;
