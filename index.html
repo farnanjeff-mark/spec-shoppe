@@ -449,6 +449,53 @@
   :focus-visible { outline: 3px solid #f0a500; outline-offset: 2px; }
   @media (max-width: 560px) { .searchrow { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ===== Color scheme (screen only, printouts unchanged) =====
+     bright blue #2E88C4 · deep blue #0C5A8E · navy #0C447C · pale blue #E8F1F9
+     green #3C9142 (dark #2F7A35) · barn red #7A2E27 · cream #EFE8D8 · text #2B2620 */
+  @media screen {
+    :root { --ink: #2B2620; --muted: #5a5248; --line: #c9d9e8; --blue: #0C447C; }
+    html, body { background: #EFE8D8; color: #2B2620; }
+    header.bar { background: linear-gradient(180deg, #2E88C4 0%, #0C5A8E 100%); }
+
+    /* buttons: main ones green, delete/remove barn red, secondary outlined in blue */
+    button.primary { background: #3C9142; color: #fff; }
+    button.primary:hover { background: #2F7A35; }
+    button.danger, .orow button.orm { background: #7A2E27; border-color: #7A2E27; color: #fff; }
+    button.danger:hover, .orow button.orm:hover { background: #5f231e; }
+    button.secondary { border-color: #2E88C4; color: #0C447C; background: #fff; }
+    button.secondary:hover { background: #E8F1F9; }
+
+    /* boxes */
+    fieldset, fieldset.rxbox, fieldset.brownbox, fieldset.mustardbox, fieldset.pbox, fieldset.green, fieldset.red { background: #fff; border-color: #2E88C4; border-left: 6px solid #2E88C4; }
+    fieldset.pricebox { background: #E8F1F9; border-color: #2E88C4; border-left: 6px solid #0C5A8E; }
+    fieldset > legend, fieldset.brownbox > legend { color: #0C447C; }
+    #view-record label, #view-record .tag, #view-record .lab, .olive-label { color: #0C447C; }
+    .cgroup.checkbox-ins, .cgroup.claim { background: #E8F1F9; border-color: #2E88C4; border-left: 5px solid #2E88C4; }
+    .cgroup.checkbox-ins .cgtitle, .cgroup.claim .cgtitle { color: #0C447C; }
+    input[type=checkbox], input[type=radio] { accent-color: #3C9142; }
+    input[type=text], input[type=email], input[type=password], input[type=search], input[type=date], textarea, select { border-color: #2E88C4; }
+    input[readonly] { background: #E8F1F9; border-color: #2E88C4; color: #0C447C; }
+    #f_patient_id { background: #7A2E27; border-color: #7A2E27; color: #fff; }
+    .ohead { background: #E8F1F9; }
+    .visitlist button { border-left-color: #2E88C4; }
+    .visitlist .sel { background: #E8F1F9; border-left-color: #3C9142; }
+    .results button { border-left-color: #2E88C4; }
+    .results button:hover { background: #E8F1F9; }
+
+    /* main menu */
+    .menupanel { background: #fff; border-color: #2E88C4; }
+    .menu button { border-color: #2E88C4; }
+    .menu button:hover { background: #E8F1F9; }
+    .menu button strong { color: #0C447C; }
+    .finds button { background: #3C9142; border-color: #3C9142; }
+    .finds button:hover { background: #2F7A35; border-color: #2F7A35; }
+    .findhead { color: #0C447C; }
+    .findgroup { color: #2F7A35; }
+    .claimtag.filed { background: #E8F1F9; color: #0C447C; }
+    .claimtag.due { background: #7A2E27; }
+    h2, h3 { color: #0C447C; }
+  }
 </style>
 </head>
 <body>
