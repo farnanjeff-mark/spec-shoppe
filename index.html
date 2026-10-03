@@ -1785,6 +1785,20 @@
   });
   rform.addEventListener("submit", (e) => { e.preventDefault(); saveNow(); });
 
+  // Ctrl+F (PC) or Cmd+F (Mac): jump to Find a patient from anywhere, saving the open patient first
+  document.addEventListener("keydown", async (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "f") return;
+    if (!$("view-login").classList.contains("hidden")) return;          // not signed in yet: leave the browser's own find alone
+    e.preventDefault();
+    if (document.querySelector(".modal:not(.hidden)")) return;          // finish or close the open popup first
+    if (!$("view-patients").classList.contains("hidden")) { searchInput.focus(); searchInput.select(); return; }
+    if (!$("view-record").classList.contains("hidden")) {
+      if (!(await ensureSaved())) return;
+      pDirty = false; rDirty = false; oDirty = false;
+      clearMessages();
+    }
+    goSearch(true);
+  });
   $("r-back-btn").addEventListener("click", async () => {
     if (!(await ensureSaved())) return;
     pDirty = false; rDirty = false; oDirty = false;
