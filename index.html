@@ -1443,8 +1443,9 @@
 
   async function removeOrderRow(row) {
     if (row.id !== null) {
-      if (!confirm("Remove this order line? This can't be undone.")) return;
-      const { error } = await db.from("orders").delete().eq("order_id", row.id);
+      if (!confirm("Remove this order line? Any daily count tied to it is removed too. This can't be undone.")) return;
+      // Removes the line and its daily count together (a count tied to the line used to block the delete)
+      const { error } = await db.rpc("delete_order", { p_order_id: row.id });
       if (error) {
         $("r-error").textContent = "Couldn't remove that line. Check the internet connection and try again.";
         return;
