@@ -120,6 +120,11 @@
   /* Main menu sections: light tan panels */
   .menupanel { background: #f5f0e6; border: 1px solid #e6dcc8; border-radius: var(--r); padding: 14px; margin: 0 0 20px; }
   .menupanel .menu { margin: 0; }
+  .vrefsec { margin: 0 0 14px; }
+  .vrefsec h3 { margin: 0 0 4px; font-size: 11.5pt; }
+  .vrefsec table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  .vrefsec td { padding: 2px 6px; border-bottom: 1px solid #e3e3e3; vertical-align: top; }
+  .vrefsec td:first-child { width: 64px; font-weight: bold; white-space: nowrap; }
   .crpat { display: grid; gap: 2px; margin: 0 0 10px; }
   .crpat b { font-size: 12pt; }
   .crpat span { color: var(--muted); }
@@ -429,7 +434,7 @@
     #print-sheet .pc-return { font-size: 9.5pt; line-height: 1.4; color: #333; }
     #print-sheet .pc-stamp { width: 0.7in; height: 0.7in; border: 0.75pt dashed #999; color: #999; font-size: 7pt; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; }
     #print-sheet .pc-msg { font-size: 12.5pt; line-height: 1.4; margin-top: 0.3in; max-width: 3.3in; }
-    #print-sheet .pc-addr { font-size: 11pt; line-height: 1.5; position: absolute; right: 0.35in; bottom: 0.35in; text-align: left; max-width: 2.6in; }
+    #print-sheet .pc-addr { font-size: 11pt; line-height: 1.5; position: absolute; right: 1.35in; bottom: 0.85in; text-align: left; max-width: 2.6in; }   /* moved up 1/2" and left 1" */
     #print-sheet .receipt { padding-top: 0.3in; }
     #print-sheet .receipt .rhead { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5pt solid #8f2a22; padding-bottom: 8pt; margin-bottom: 12pt; }
     #print-sheet .receipt .rshop { font-size: 13pt; font-weight: bold; }
@@ -933,6 +938,7 @@
       </fieldset>
       <fieldset>
         <legend>Procedure codes (CPT)</legend>
+        <p style="margin: 0 0 8px;"><button type="button" class="secondary" id="vref-btn">V-code list</button></p>
         <div id="claim-cpt-items"></div>
       </fieldset>
   <!-- Common codes: the drop-down lists on the Claim info code boxes. Add a line to add a code. -->
@@ -988,6 +994,14 @@
         <button type="button" class="secondary" id="claim-vsp">VSP form</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="vref-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Vision V-code list">
+  <div class="modalbox countbox" style="max-width: 760px;">
+    <div class="modalhead"><h2>Vision V-codes (HCPCS)</h2><span class="note">Per lens unless noted. Codes update each January.</span></div>
+    <div class="modalscroll" id="vref-body" style="max-height: 70vh; overflow-y: auto;"></div>
+    <div class="countbtns" style="padding: 10px 16px;"><button type="button" class="primary" id="vref-close">Close</button></div>
   </div>
 </div>
 
@@ -2117,6 +2131,33 @@
     $("cr-modal").classList.add("hidden");
     window.print();
   });
+
+  /* ---------- V-code reference list (Claim info → V-code list) ---------- */
+  const SC = (b) => [  // the sphere / sphere+cyl ladder shared by single vision, bifocal and trifocal
+    [b+"00","Sphere, plano to ±4.00"],[b+"01","Sphere, ±4.12 to ±7.00"],[b+"02","Sphere, ±7.12 to ±20.00"],
+    [b+"03","Sph+cyl: plano to ±4.00 sph, 0.12–2.00 cyl"],[b+"04","Sph+cyl: plano to ±4.00 sph, 2.12–4.00 cyl"],
+    [b+"05","Sph+cyl: plano to ±4.00 sph, 4.25–6.00 cyl"],[b+"06","Sph+cyl: plano to ±4.00 sph, over 6.00 cyl"],
+    [b+"07","Sph+cyl: ±4.25 to ±7.00 sph, 0.12–2.00 cyl"],[b+"08","Sph+cyl: ±4.25 to ±7.00 sph, 2.12–4.00 cyl"],
+    [b+"09","Sph+cyl: ±4.25 to ±7.00 sph, 4.25–6.00 cyl"],[b+"10","Sph+cyl: ±4.25 to ±7.00 sph, over 6.00 cyl"],
+    [b+"11","Sph+cyl: ±7.25 to ±12.00 sph, 0.25–2.25 cyl"],[b+"12","Sph+cyl: ±7.25 to ±12.00 sph, 2.25–4.00 cyl"],
+    [b+"13","Sph+cyl: ±7.25 to ±12.00 sph, 4.25–6.00 cyl"],[b+"14","Sph+cyl: over ±12.00 sph"],
+    [b+"15","Lenticular (myodisc)"],[b+"18","Aniseikonic"]];
+  const VCODES = [
+    ["Frames", [["V2020","Frame"],["V2025","Deluxe frame (not covered by Medicare)"]]],
+    ["Single vision", SC("V21").concat([["V2121","Lenticular lens"],["V2199","Single vision, not otherwise classified"]])],
+    ["Bifocal", SC("V22").concat([["V2219","Bifocal seg width over 28 mm"],["V2220","Bifocal add over 3.25"],["V2221","Lenticular lens, bifocal"],["V2299","Specialty bifocal (by report)"]])],
+    ["Trifocal", SC("V23").concat([["V2319","Trifocal seg width over 28 mm"],["V2320","Trifocal add over 3.25"],["V2321","Lenticular lens, trifocal"],["V2399","Specialty trifocal (by report)"]])],
+    ["Progressive & specialty", [["V2781","Progressive lens"],["V2786","Specialty occupational multifocal"],["V2410","Variable asphericity, single vision, full field"],["V2430","Variable asphericity, bifocal, full field"],["V2499","Variable sphericity, other type"]]],
+    ["Materials", [["V2784","Polycarbonate (or equal), any index"],["V2782","High index: 1.54–1.65 plastic or 1.60–1.79 glass (not poly)"],["V2783","High index: 1.66+ plastic or 1.80+ glass (not poly)"]]],
+    ["Tints, coatings & options", [["V2744","Photochromic tint (Transitions)"],["V2745","Tint, any color, solid or gradient"],["V2750","Anti-reflective coating"],["V2760","Scratch-resistant coating"],["V2761","Mirror coating"],["V2762","Polarized"],["V2755","UV lens"],["V2780","Oversize lens"],["V2700","Balance lens"],["V2702","Deluxe lens feature"],["V2710","Slab-off prism"],["V2715","Prism"],["V2718","Press-on (Fresnel) prism"],["V2730","Special base curve"],["V2770","Occluder lens"],["V2756","Eyeglass case"]]],
+    ["Contact lenses", [["V2520","Soft, spherical"],["V2521","Soft, toric"],["V2522","Soft, bifocal / multifocal"],["V2523","Soft, extended wear"],["V2510","Gas permeable, spherical"],["V2511","Gas permeable, toric"],["V2512","Gas permeable, bifocal"],["V2513","Gas permeable, extended wear"],["V2530","Scleral, gas impermeable"],["V2531","Scleral, gas permeable"],["V2599","Contact lens, other type"]]],
+    ["Other", [["V2797","Vision supply/service that's part of another V-code"],["V2799","Vision item or service, miscellaneous"]]]
+  ];
+  $("vref-body").innerHTML = VCODES.map(([title, rows]) =>
+    '<div class="vrefsec"><h3>' + esc(title) + "</h3><table>" + rows.map(([c, d]) => "<tr><td>" + c + "</td><td>" + esc(d) + "</td></tr>").join("") + "</table></div>").join("");
+  $("vref-btn").addEventListener("click", () => { $("vref-modal").classList.remove("hidden"); $("vref-body").scrollTop = 0; $("vref-close").focus(); });
+  $("vref-close").addEventListener("click", () => $("vref-modal").classList.add("hidden"));
+  $("vref-modal").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); $("vref-modal").classList.add("hidden"); } });
 
   $("print-btn").addEventListener("click", async () => {
     if (!(await ensureSaved("print"))) return;
