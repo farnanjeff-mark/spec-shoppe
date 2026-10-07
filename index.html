@@ -2783,6 +2783,8 @@
         '<div class="repbox" style="grid-column: 1 / -1"><h3>What was sold</h3><table><tr><th>Item</th><th class="n">How many</th><th class="n">% of visits</th><th class="n">Average</th><th class="n">Total</th></tr>' +
           saleRow("Complete pairs (lens + frame)", S.complete) + saleRow("Lenses only", S.lenses) + saleRow("Frames only", S.frames) +
           saleRow("Contacts", S.contacts) + saleRow("Exams", S.exams) +
+          (r.parts ? '<tr><th colspan="5" style="padding-top:10px">Charges by part (every visit with that charge)</th></tr>' +
+            saleRow("Lenses", r.parts.lens) + saleRow("Frames", r.parts.frame) + saleRow("Misc (tints, coatings, etc.)", r.parts.misc) : "") +
           '<tr><td>Tax collected</td><td></td><td></td><td></td><td class="n">' + $m(r.money.tax) + "</td></tr>" +
           '<tr><td>Adjustments</td><td></td><td></td><td></td><td class="n">' + $m(r.money.adjust) + "</td></tr></table></div>" +
         '<div class="repbox"><h3>Doctors</h3>' + repTable(r.doctors, V, "Doctor") + "</div>" +
