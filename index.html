@@ -120,6 +120,36 @@
   /* Main menu sections: light tan panels */
   .menupanel { background: #f5f0e6; border: 1px solid #e6dcc8; border-radius: var(--r); padding: 14px; margin: 0 0 20px; }
   .menupanel .menu { margin: 0; }
+  .menu .backupcard { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #2E88C4; border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow); }
+  .menu .backupcard .micon { background: rgba(46, 136, 196, 0.12); }
+  .menu .backupcard strong { font-size: 13pt; display: block; color: #0C447C; }
+  .menu .backupcard .mtext { flex: 1; min-width: 0; }
+  .menu .backupcard .bkbtns { display: flex; flex-wrap: nowrap; gap: 8px; margin-top: 6px; }
+  .menu .backupcard .bkbtns button { flex: 0 0 auto; white-space: nowrap; }
+  .menu .backupcard .bkbtns button { width: auto; padding: 6px 12px; font-size: 10pt; font-weight: bold; box-shadow: none; border: 0; border-radius: 6px; text-align: center; display: inline-block; background: #3C9142; color: #fff; }
+  .menu .backupcard .bkbtns button:hover { background: #2F7A35; }
+  .menu .backupcard #backup-note, .menu .backupcard #icloud-note { color: var(--muted); font-size: 10pt; display: block; margin-top: 4px; }
+  .reprange { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 10px; margin: 0 0 12px; }
+  .reprange input { width: 110px; }
+  .repgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .repbox { background: #fff; border: 1px solid #2E88C4; border-left: 6px solid #2E88C4; border-radius: 6px; padding: 10px 14px; }
+  .repbox h3 { margin: 0 0 6px; font-size: 12pt; }
+  .repbox table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+  .repbox th { text-align: left; color: #5a5248; font-weight: bold; font-size: 9.5pt; border-bottom: 1px solid #c9d9e8; padding: 3px 4px; }
+  .repbox td { padding: 3px 4px; border-bottom: 1px solid #eef2f6; }
+  .repbox td.n, .repbox th.n { text-align: right; white-space: nowrap; }
+  .repbar { display: inline-block; height: 8px; background: #3C9142; border-radius: 4px; vertical-align: middle; }
+  .reptiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 14px; }
+  .reptile { background: #E8F1F9; border-radius: 6px; padding: 8px 12px; }
+  .reptile b { display: block; font-size: 16pt; color: #0C447C; }
+  .reptile span { font-size: 9.5pt; color: #5a5248; }
+  @media print {
+    body.printing-report > *:not(main) { display: none !important; }
+    body.printing-report main > section:not(#view-reports) { display: none !important; }
+    body.printing-report #view-reports .reprange, body.printing-report #view-reports button, body.printing-report #print-sheet { display: none !important; }
+    body.printing-report #view-reports { display: block !important; }
+    body.printing-report .repbox { break-inside: avoid; }
+  }
   .vrefsec { margin: 0 0 14px; }
   .vrefsec h3 { margin: 0 0 4px; font-size: 11.5pt; }
   .vrefsec table { width: 100%; border-collapse: collapse; font-size: 10pt; }
@@ -553,14 +583,17 @@
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8f2a22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span>
         <span class="mtext"><strong>Vendors</strong></span>
       </button>
-      <button type="button" class="backup" id="backup-btn">
-        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6F4E37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></span>
-        <span class="mtext"><strong>Download backup (Excel)</strong><span id="backup-note"></span></span>
-      </button>
-      <button type="button" class="backup" id="icloud-btn">
-        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E88C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.5 4.25 4.25 0 0 0 7 18z"/><path d="M12 11v5"/><path d="M9.5 13.5 12 11l2.5 2.5"/></svg></span>
-        <span class="mtext"><strong>Backup to iCloud</strong><span id="icloud-note"></span></span>
-      </button>
+      <div class="backupcard">
+        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E88C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></span>
+        <div class="mtext">
+          <strong>Backup</strong>
+          <div class="bkbtns">
+            <button type="button" class="primary" id="backup-btn">Download (Excel)</button>
+            <button type="button" class="primary" id="icloud-btn">Save to iCloud</button>
+          </div>
+          <span id="backup-note"></span><span id="icloud-note"></span>
+        </div>
+      </div>
       <button type="button" class="manage" data-go="manage">
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8f2a22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><line x1="10" y1="10" x2="10" y2="17"/><line x1="14" y1="10" x2="14" y2="17"/></svg></span>
         <span class="mtext"><strong>Manage records</strong></span>
@@ -837,8 +870,30 @@
   </section>
 
   <!-- Patients with a check box marked -->
+  <section id="view-reports" class="hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <h2>Sales report</h2>
+      <button type="button" class="primary" data-go="menu">Main menu</button>
+    </div>
+    <div class="reprange">
+      <label>From <input type="text" id="rep-from" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+      <label>To <input type="text" id="rep-to" class="dateinput" inputmode="numeric" maxlength="8" placeholder="MM/DD/YY" autocomplete="off"></label>
+      <button type="button" class="primary" id="rep-show">Show</button>
+      <button type="button" class="secondary" id="rep-thismonth">This month</button>
+      <button type="button" class="secondary" id="rep-lastmonth">Last month</button>
+      <button type="button" class="secondary" id="rep-ytd">This year</button>
+      <button type="button" class="primary" id="rep-print">Print</button>
+    </div>
+    <p class="error" id="rep-error" role="alert"></p>
+    <div id="rep-body"></div>
+    <p><button type="button" class="secondary" id="rep-back">Back to Manage records</button></p>
+  </section>
+
   <section id="view-manage" class="hidden">
-    <h2>Manage records</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <h2>Manage records</h2>
+      <button type="button" class="primary" id="rep-open">Sales report</button>
+    </div>
     <p class="note mgwarn">Deleting can't be undone. Run <strong>Download backup</strong> on the main menu first if you haven't today.</p>
     <div id="mg-find">
       <div class="searchrow">
@@ -1122,7 +1177,7 @@
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   /* ---------- Screens ---------- */
-  const views = ["login", "menu", "patients", "checked", "recalls", "vendors", "vendor", "record", "counts", "manage"];
+  const views = ["login", "menu", "patients", "checked", "recalls", "vendors", "vendor", "record", "counts", "manage", "reports"];
   function show(name) {
     views.forEach(v => document.getElementById("view-" + v).classList.toggle("hidden", v !== name));
     document.getElementById("main").classList.toggle("wide", name === "record");
@@ -2644,6 +2699,67 @@
     $("vendor-error").textContent = "";
     printDymo([upv(co), upv(ad), cityStateZip(ci, $("vd_state"), $("vd_zip_code"))]);
   });
+
+  /* ---------- Sales report (Manage records → Sales report) ---------- */
+  const isoOf = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  function repSetRange(a, b) { setDate($("rep-from"), isoOf(a)); setDate($("rep-to"), isoOf(b)); repShow(); }
+  $("rep-open").addEventListener("click", () => {
+    show("reports");
+    if (!$("rep-from").value) { const t = new Date(); repSetRange(new Date(t.getFullYear(), t.getMonth(), 1), t); }
+  });
+  $("rep-back").addEventListener("click", () => openManage());
+  $("rep-thismonth").addEventListener("click", () => { const t = new Date(); repSetRange(new Date(t.getFullYear(), t.getMonth(), 1), new Date(t.getFullYear(), t.getMonth() + 1, 0)); });
+  $("rep-lastmonth").addEventListener("click", () => { const t = new Date(); repSetRange(new Date(t.getFullYear(), t.getMonth() - 1, 1), new Date(t.getFullYear(), t.getMonth(), 0)); });
+  $("rep-ytd").addEventListener("click", () => { const t = new Date(); repSetRange(new Date(t.getFullYear(), 0, 1), t); });
+  $("rep-show").addEventListener("click", () => repShow());
+  $("rep-print").addEventListener("click", () => {
+    document.body.classList.add("printing-report");
+    window.addEventListener("afterprint", function done() { window.removeEventListener("afterprint", done); document.body.classList.remove("printing-report"); });
+    window.print();
+  });
+  const $m = (n) => (Number(n) < 0 ? "\u2212$" : "$") + Math.abs(Number(n || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pct = (n, of) => of ? (Math.round(n * 1000 / of) / 10).toFixed(1) + "%" : "0%";
+  function repTable(rows, total, label) {
+    const max = Math.max(1, ...rows.map(r => r.n));
+    return '<table><tr><th>' + label + '</th><th class="n">Visits</th><th class="n">%</th><th></th></tr>' +
+      rows.map(r => "<tr><td>" + esc(r.name) + '</td><td class="n">' + r.n + '</td><td class="n">' + pct(r.n, total) +
+        '</td><td style="width:30%"><span class="repbar" style="width:' + Math.round(r.n * 100 / max) + '%"></span></td></tr>').join("") + "</table>";
+  }
+  async function repShow() {
+    $("rep-error").textContent = "";
+    const a = readDate($("rep-from")), b = readDate($("rep-to"));
+    if (!a || !b) { $("rep-error").textContent = "Enter a From and To date, like 09/01/26."; return; }
+    $("rep-body").innerHTML = '<p class="note">Adding it up...</p>';
+    const { data: r, error } = await db.rpc("report_summary", { from_date: a, to_date: b });
+    if (error || !r) { $("rep-body").innerHTML = ""; $("rep-error").textContent = "The report didn't load. Check the internet connection and try again."; return; }
+    const V = r.visits, S = r.sales;
+    const saleRow = (label, x) => "<tr><td>" + label + '</td><td class="n">' + x.n + '</td><td class="n">' + pct(x.n, V) + '</td><td class="n">' + (x.n ? $m(x.avg) : "—") + '</td><td class="n">' + $m(x.sum) + "</td></tr>";
+    const insRows = Object.entries(r.insurance).map(([name, n]) => ({ name, n })).filter(x => x.n).sort((p, q) => q.n - p.n);
+    const cities = r.cities.slice(0, 15), moreCities = r.cities.slice(15).reduce((t, c) => t + c.n, 0);
+    if (moreCities) cities.push({ name: "All other towns (" + (r.cities.length - 15) + ")", n: moreCities });
+    $("rep-body").innerHTML =
+      '<p class="note">' + esc(fmtDate(a)) + " to " + esc(fmtDate(b)) + "</p>" +
+      '<div class="reptiles">' +
+        '<div class="reptile"><b>' + V + "</b><span>Visits</span></div>" +
+        '<div class="reptile"><b>' + r.patients + "</b><span>Patients seen</span></div>" +
+        '<div class="reptile"><b>' + r.newpts + "</b><span>New patients (" + pct(r.newpts, r.patients) + ")</span></div>" +
+        '<div class="reptile"><b>' + $m(r.money.total) + "</b><span>Total sales</span></div>" +
+        '<div class="reptile"><b>' + (r.money.avg_visit ? $m(r.money.avg_visit) : "—") + "</b><span>Average per visit</span></div>" +
+      "</div>" +
+      '<div class="repgrid">' +
+        '<div class="repbox" style="grid-column: 1 / -1"><h3>What was sold</h3><table><tr><th>Item</th><th class="n">How many</th><th class="n">% of visits</th><th class="n">Average</th><th class="n">Total</th></tr>' +
+          saleRow("Complete pairs (lens + frame)", S.complete) + saleRow("Lenses only", S.lenses) + saleRow("Frames only", S.frames) +
+          saleRow("Contacts", S.contacts) + saleRow("Exams", S.exams) +
+          '<tr><td>Tax collected</td><td></td><td></td><td></td><td class="n">' + $m(r.money.tax) + "</td></tr>" +
+          '<tr><td>Adjustments</td><td></td><td></td><td></td><td class="n">' + $m(r.money.adjust) + "</td></tr></table></div>" +
+        '<div class="repbox"><h3>Doctors</h3>' + repTable(r.doctors, V, "Doctor") + "</div>" +
+        '<div class="repbox"><h3>Where patients came from</h3>' + repTable(cities, V, "Town") + "</div>" +
+        '<div class="repbox"><h3>Insurance</h3>' + repTable(insRows, V, "Plan") +
+          '<p class="note" style="margin:6px 0 0">From the check boxes on each patient as they are today.</p></div>' +
+        (r.months.length > 1 ? '<div class="repbox"><h3>Month by month</h3><table><tr><th>Month</th><th class="n">Visits</th><th class="n">Pairs</th><th class="n">Contacts</th><th class="n">Sales</th></tr>' +
+          r.months.map(m => "<tr><td>" + m.mo.slice(5) + "/" + m.mo.slice(2, 4) + '</td><td class="n">' + m.n + '</td><td class="n">' + m.complete + '</td><td class="n">' + m.contacts + '</td><td class="n">' + $m(m.total) + "</td></tr>").join("") + "</table></div>" : "") +
+      "</div>";
+  }
 
   /* ---------- Manage records: delete a visit or a whole patient ---------- */
   let mgPatient = null, mgSeq = 0, mgTimer = null, mgPending = null;
