@@ -104,7 +104,7 @@
   .menu button.vendors .micon { background: rgba(143, 42, 34, 0.1); }
   .menu button.backup .micon { background: rgba(111, 78, 55, 0.12); }
   .menu button:disabled { opacity: 0.6; cursor: default; }
-  #backup-note:empty { display: none; }
+  #backup-note:empty, #icloud-note:empty { display: none; }
   .menu button strong { font-size: 13pt; display: block; }
   .menu button .mtext span { color: var(--muted); font-size: 10.5pt; display: block; margin-top: 2px; }
   .findhead { font-size: 13pt; margin: 0 0 3px; }
@@ -556,6 +556,10 @@
       <button type="button" class="backup" id="backup-btn">
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6F4E37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></span>
         <span class="mtext"><strong>Download backup (Excel)</strong><span id="backup-note"></span></span>
+      </button>
+      <button type="button" class="backup" id="icloud-btn">
+        <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E88C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.5 4.25 4.25 0 0 0 7 18z"/><path d="M12 11v5"/><path d="M9.5 13.5 12 11l2.5 2.5"/></svg></span>
+        <span class="mtext"><strong>Backup to iCloud</strong><span id="icloud-note"></span></span>
       </button>
       <button type="button" class="manage" data-go="manage">
         <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8f2a22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><line x1="10" y1="10" x2="10" y2="17"/><line x1="14" y1="10" x2="14" y2="17"/></svg></span>
@@ -3629,21 +3633,58 @@
     if (!error && count !== null && count !== all.length) throw new Error(table + ": got " + all.length + " of " + count);
     return all;
   }
+  async function buildBackupBook(note) {
+    const wb = XLSX.utils.book_new();
+    const got = [];
+    for (const [t, key] of BACKUP_TABLES) {
+      const data = await fetchAll(t, key, n => { note.textContent = "Gathering " + t + "... " + n.toLocaleString(); });
+      got.push(t + " " + data.length.toLocaleString());
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), t.slice(0, 31));
+    }
+    return { wb, got, name: "spec-shoppe-backup-" + new Date().toISOString().slice(0, 10) + ".xlsx" };
+  }
+
+  // Backup to iCloud: opens a Save window; Chrome remembers the folder picked (e.g. iCloud Drive > Spec Shoppe Backups)
+  $("icloud-btn").addEventListener("click", async () => {
+    const btn = $("icloud-btn"), note = $("icloud-note");
+    let handle = null;
+    if (window.showSaveFilePicker) {
+      try {
+        handle = await window.showSaveFilePicker({
+          id: "specshoppe-backup", startIn: "documents",
+          suggestedName: "spec-shoppe-backup-" + new Date().toISOString().slice(0, 10) + ".xlsx",
+          types: [{ description: "Excel workbook", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] } }]
+        });
+      } catch (e) { if (e.name === "AbortError") { note.textContent = ""; return; } }
+    }
+    btn.disabled = true;
+    note.textContent = "Gathering data...";
+    try {
+      const { wb, got, name } = await buildBackupBook(note);
+      if (handle) {
+        const w = await handle.createWritable();
+        await w.write(new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })]));
+        await w.close();
+        note.textContent = "Saved to " + handle.name + ": " + got.slice(0, 3).join(", ") + ".";
+      } else {
+        XLSX.writeFile(wb, name);   // browser without a Save window: falls back to a normal download
+        note.textContent = "Downloaded (this browser can't pick a folder): " + got.slice(0, 3).join(", ") + ".";
+      }
+      try { sessionStorage.setItem("backupDay", new Date().toDateString()); } catch (e) {}
+    } catch (err) {
+      note.textContent = "Backup failed. Check the internet connection and try again.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   $("backup-btn").addEventListener("click", async () => {
     const btn = $("backup-btn"), note = $("backup-note");
     btn.disabled = true;
     note.textContent = "Gathering data...";
     try {
-      const wb = XLSX.utils.book_new();
-      const got = [];
-      for (const [t, key] of BACKUP_TABLES) {
-        const data = await fetchAll(t, key, n => { note.textContent = "Gathering " + t + "... " + n.toLocaleString(); });
-        got.push(t + " " + data.length.toLocaleString());
-        const sheet = XLSX.utils.json_to_sheet(data);
-        XLSX.utils.book_append_sheet(wb, sheet, t.slice(0, 31));
-      }
-      const stamp = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, "spec-shoppe-backup-" + stamp + ".xlsx");
+      const { wb, got, name } = await buildBackupBook(note);
+      XLSX.writeFile(wb, name);
       note.textContent = "Downloaded: " + got.slice(0, 3).join(", ") + ".";
       try { sessionStorage.setItem("backupDay", new Date().toDateString()); } catch (e) {}
     } catch (err) {
