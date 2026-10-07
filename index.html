@@ -2787,6 +2787,15 @@
             saleRow("Lenses", r.parts.lens) + saleRow("Frames", r.parts.frame) + saleRow("Misc (tints, coatings, etc.)", r.parts.misc) : "") +
           '<tr><td>Tax collected</td><td></td><td></td><td></td><td class="n">' + $m(r.money.tax) + "</td></tr>" +
           '<tr><td>Adjustments</td><td></td><td></td><td></td><td class="n">' + $m(r.money.adjust) + "</td></tr></table></div>" +
+        (r.weekdays && r.weekdays.length ? (() => {
+          const busiest = r.weekdays.reduce((p, q) => (q.n > p.n ? q : p));
+          const max = Math.max(1, ...r.weekdays.map(w => w.n));
+          return '<div class="repbox"><h3>Busiest days</h3><p class="note" style="margin:0 0 6px">Busiest: <b>' + esc(busiest.name) + "</b> (" + pct(busiest.n, V) + " of visits)</p>" +
+            '<table><tr><th>Day</th><th class="n">Visits</th><th class="n">%</th><th class="n">Sales</th><th></th></tr>' +
+            r.weekdays.map(w => "<tr" + (w === busiest ? ' style="font-weight:bold"' : "") + "><td>" + esc(w.name) + '</td><td class="n">' + w.n + '</td><td class="n">' + pct(w.n, V) +
+              '</td><td class="n">' + $m(w.total) + '</td><td style="width:25%"><span class="repbar" style="width:' + Math.round(w.n * 100 / max) + '%"></span></td></tr>').join("") +
+            "</table></div>";
+        })() : "") +
         '<div class="repbox"><h3>Doctors</h3>' + repTable(r.doctors, V, "Doctor") + "</div>" +
         '<div class="repbox"><h3>Where patients came from</h3>' + repTable(cities, V, "Town") + "</div>" +
         '<div class="repbox"><h3>Insurance</h3>' + repTable(insRows, V, "Plan") +
