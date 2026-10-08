@@ -2787,6 +2787,15 @@
             saleRow("Lenses", r.parts.lens) + saleRow("Frames", r.parts.frame) + saleRow("Misc (tints, coatings, etc.)", r.parts.misc) : "") +
           '<tr><td>Tax collected</td><td></td><td></td><td></td><td class="n">' + $m(r.money.tax) + "</td></tr>" +
           '<tr><td>Adjustments</td><td></td><td></td><td></td><td class="n">' + $m(r.money.adjust) + "</td></tr></table></div>" +
+        (r.lenses && r.lenses.total ? (() => {
+          const L = r.lenses, T = L.total;
+          return '<div class="repbox"><h3>Lens types</h3><p class="note" style="margin:0 0 6px">' + T + ' lens orders · <b>' + L.transition + ' Transitions</b> (' + pct(L.transition, T) + ')</p>' +
+            '<table><tr><th>Style</th><th class="n">How many</th><th class="n">%</th><th class="n">Transitions</th></tr>' +
+            (L.styles || []).map(x => '<tr><td>' + esc(x.name) + '</td><td class="n">' + x.n + '</td><td class="n">' + pct(x.n, T) + '</td><td class="n">' + x.tr + '</td></tr>').join("") +
+            '</table><table style="margin-top:10px"><tr><th>Material</th><th class="n">How many</th><th class="n">%</th></tr>' +
+            (L.materials || []).map(x => '<tr><td>' + esc(x.name) + '</td><td class="n">' + x.n + '</td><td class="n">' + pct(x.n, T) + '</td></tr>').join("") +
+            '</table><p class="note" style="margin:6px 0 0">Sorted from the Lens type typed on each visit.</p></div>';
+        })() : "") +
         (r.weekdays && r.weekdays.length ? (() => {
           const busiest = r.weekdays.reduce((p, q) => (q.n > p.n ? q : p));
           const max = Math.max(1, ...r.weekdays.map(w => w.n));
