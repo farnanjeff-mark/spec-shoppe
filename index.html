@@ -3220,11 +3220,13 @@
     const items = [];
     if (!visitCount) {
       items.push({ order_id: null, date: rx.service_date, title: "This visit, " + fmtDate(rx.service_date) });
-    } else {
-      const since = Date.parse(visitCount.created_at);
-      oRes.data.filter(o => !counted.has(o.order_id) && Date.parse(o.created_at) > since).forEach(o =>
-        items.push({ order_id: o.order_id, date: o.nb_date || rx.service_date, title: "New order line " + fmtDate(o.nb_date) + (o.nb_note ? ": " + o.nb_note : "") }));
     }
+    // Every order line without a count gets asked about, whether or not the visit itself was counted first.
+    // Old lines that came in with the imported data (saved within an hour of their visit, on a visit saved more than a day ago) are left alone.
+    const rxMade = Date.parse(rx.created_at), DAY = 24 * 3600 * 1000, HOUR = 3600 * 1000;
+    const freshVisit = !isNaN(rxMade) && Date.now() - rxMade < DAY;
+    oRes.data.filter(o => !counted.has(o.order_id) && (freshVisit || isNaN(rxMade) || Date.parse(o.created_at) - rxMade > HOUR)).forEach(o =>
+      items.push({ order_id: o.order_id, date: o.nb_date || rx.service_date, title: "Order line " + fmtDate(o.nb_date) + (o.nb_note ? ": " + o.nb_note : "") }));
     if (!items.length) return true;
     return new Promise((resolve) => {
       const box = $("count-items");
