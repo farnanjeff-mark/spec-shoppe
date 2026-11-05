@@ -1280,6 +1280,15 @@
   const pin = {};   // patient field name -> input element
   P_TEXT.concat(P_DATES, P_BOOLS).forEach(n => { pin[n] = $("f_" + n); });
 
+  // A Medicaid number typed in, or Home State Health checked: the Medicaid box gets checked for you (it never unchecks).
+  const autoMedicaid = () => {
+    if (pin.ck_xix.checked) return;
+    pin.ck_xix.checked = true;
+    pin.ck_xix.dispatchEvent(new Event("input", { bubbles: true }));   // so the page knows the record changed
+  };
+  pin.medical_no.addEventListener("blur", () => { if (pin.medical_no.value.trim()) autoMedicaid(); });
+  pin.ck_home_state_health.addEventListener("change", () => { if (pin.ck_home_state_health.checked) autoMedicaid(); });
+
   /* ---------- Prescription fields ---------- */
   const vin = {};   // prescription field name -> input element
 
@@ -1993,8 +2002,8 @@
     const cityLine = [val(pin.city), [val(pin.state), val(pin.zip_code)].filter(Boolean).join(" ")].filter(Boolean).join(", ");
     const addr = esc([val(pin.address), cityLine].filter(Boolean).join(", "));
     const visit = esc(val(vin.service_date)) + (val(vin.doctor) ? " &nbsp;|&nbsp; " + esc(val(vin.doctor)) : "");
-    // Medicaid or Home State Health patients: their number prints next to the name, same size
-    const medNo = (pin.ck_xix.checked || pin.ck_home_state_health.checked) && val(pin.medical_no)
+    // Any patient with a Medicaid number: it prints next to the name, same size (no checkbox needed)
+    const medNo = val(pin.medical_no)
       ? " &nbsp;&nbsp; MEDICAID # " + esc(val(pin.medical_no)) : "";
     const dobTop = val(pin.birthday) ? " &nbsp;&nbsp; DOB " + esc(val(pin.birthday)) : "";
 
