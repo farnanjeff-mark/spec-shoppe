@@ -1287,6 +1287,14 @@
     pin.ck_xix.dispatchEvent(new Event("input", { bubbles: true }));   // so the page knows the record changed
   };
   pin.medical_no.addEventListener("blur", () => { if (pin.medical_no.value.trim()) autoMedicaid(); });
+  // Same idea for the other insurance numbers: a number typed in checks its own box (never unchecks).
+  [["vsp_number", "ck_vsp"], ["ecpa_number", "ck_eye_med"], ["nva_number", "ck_nva"]].forEach(([numKey, boxKey]) => {
+    pin[numKey].addEventListener("blur", () => {
+      if (!pin[numKey].value.trim() || pin[boxKey].checked) return;
+      pin[boxKey].checked = true;
+      pin[boxKey].dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
   pin.ck_home_state_health.addEventListener("change", () => { if (pin.ck_home_state_health.checked) autoMedicaid(); });
 
   /* ---------- Prescription fields ---------- */
