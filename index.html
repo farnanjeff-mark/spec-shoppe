@@ -2026,9 +2026,9 @@
 
     const lines = orderRows.filter(rowHasContent);
     const shown = lines.slice(0, MAX_PRINT_ORDERS);
-    // The newest order line (the last one) prints highlighted: yellow on a color printer, pale gray in black and white
+    // The newest order line (the last one, even if it is the only one) prints highlighted: yellow on a color printer, pale gray in black and white
     const orders = shown.map((r, i) =>
-      "<tr" + (i === lines.length - 1 && lines.length > 1 ? ' class="newest"' : "") + '><td class="l">' + esc(r.date.value) + '</td><td class="l">' + esc(r.note.value) + '</td><td class="r">' +
+      "<tr" + (i === lines.length - 1 ? ' class="newest"' : "") + '><td class="l">' + esc(r.date.value) + '</td><td class="l">' + esc(r.note.value) + '</td><td class="r">' +
       moneyOut(r.price.value) + '</td><td class="r">' + moneyOut(r.tax.value) + '</td><td class="r">' + moneyOut(r.total.value) + "</td></tr>").join("");
     // Extra lines are noted beside the Orders title so the Office use boxes still fit above the fold
     const moreN = lines.length - shown.length;
